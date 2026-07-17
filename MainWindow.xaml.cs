@@ -117,14 +117,17 @@ namespace Pomodoro
             this.SizeChanged += (s, e) => UpdateWebWallpaperPosition();
             this.StateChanged += (s, e) =>
             {
-                if (this.WindowState == WindowState.Minimized)
+                if (_webWallpaperWindow != null)
                 {
-                    if (_webWallpaperWindow != null)
+                    if (this.WindowState == WindowState.Minimized)
+                    {
                         _webWallpaperWindow.WindowState = WindowState.Minimized;
-                }
-                else
-                {
-                    if (_webWallpaperWindow != null)
+                    }
+                    else if (this.WindowState == WindowState.Maximized)
+                    {
+                        _webWallpaperWindow.WindowState = WindowState.Maximized;
+                    }
+                    else
                     {
                         _webWallpaperWindow.WindowState = WindowState.Normal;
                         UpdateWebWallpaperPosition();
@@ -473,7 +476,7 @@ namespace Pomodoro
 
         private void UpdateWebWallpaperPosition()
         {
-            if (_webWallpaperWindow != null && _webWallpaperWindow.IsVisible)
+            if (_webWallpaperWindow != null)
             {
                 _webWallpaperWindow.Left = this.Left;
                 _webWallpaperWindow.Top = this.Top;
@@ -485,7 +488,7 @@ namespace Pomodoro
 
         private void KeepWallpaperBehind()
         {
-            if (_webWallpaperWindow == null || !_webWallpaperWindow.IsVisible) return;
+            if (_webWallpaperWindow == null) return;
             try
             {
                 var wwh = new WindowInteropHelper(_webWallpaperWindow).Handle;

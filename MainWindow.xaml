@@ -433,11 +433,12 @@
                         <Button.Template>
                             <ControlTemplate TargetType="Button">
                                 <Border x:Name="Bg" Background="Transparent">
-                                    <Path Data="M0,0 L10,0" Stroke="#A1A1AA" StrokeThickness="2" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    <Path x:Name="IconPath" Data="M0,0 L10,0" Stroke="{Binding DataContext.SubTextForegroundBrush, RelativeSource={RelativeSource AncestorType=Window}}" StrokeThickness="2" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Border>
                                 <ControlTemplate.Triggers>
                                     <Trigger Property="IsMouseOver" Value="True">
                                         <Setter TargetName="Bg" Property="Background" Value="#27272A"/>
+                                        <Setter TargetName="IconPath" Property="Stroke" Value="{Binding DataContext.SelectedAccentBrush, RelativeSource={RelativeSource AncestorType=Window}}"/>
                                     </Trigger>
                                 </ControlTemplate.Triggers>
                             </ControlTemplate>
@@ -449,11 +450,12 @@
                         <Button.Template>
                             <ControlTemplate TargetType="Button">
                                 <Border x:Name="Bg" Background="Transparent">
-                                    <Path Data="M0,0 L10,0 L10,10 L0,10 Z" Stroke="#A1A1AA" StrokeThickness="1.5" Fill="Transparent" HorizontalAlignment="Center" VerticalAlignment="Center" Width="10" Height="10" Stretch="Fill"/>
+                                    <Path x:Name="IconPath" Data="M0,0 L10,0 L10,10 L0,10 Z" Stroke="{Binding DataContext.SubTextForegroundBrush, RelativeSource={RelativeSource AncestorType=Window}}" StrokeThickness="1.5" Fill="Transparent" HorizontalAlignment="Center" VerticalAlignment="Center" Width="10" Height="10" Stretch="Fill"/>
                                 </Border>
                                 <ControlTemplate.Triggers>
                                     <Trigger Property="IsMouseOver" Value="True">
                                         <Setter TargetName="Bg" Property="Background" Value="#27272A"/>
+                                        <Setter TargetName="IconPath" Property="Stroke" Value="{Binding DataContext.SelectedAccentBrush, RelativeSource={RelativeSource AncestorType=Window}}"/>
                                     </Trigger>
                                 </ControlTemplate.Triggers>
                             </ControlTemplate>
@@ -465,11 +467,12 @@
                         <Button.Template>
                             <ControlTemplate TargetType="Button">
                                 <Border x:Name="Bg" Background="Transparent">
-                                    <Path Data="M0,0 L10,10 M10,0 L0,10" Stroke="#A1A1AA" StrokeThickness="1.5" HorizontalAlignment="Center" VerticalAlignment="Center" Width="10" Height="10" Stretch="Fill"/>
+                                    <Path x:Name="IconPath" Data="M0,0 L10,10 M10,0 L0,10" Stroke="{Binding DataContext.SubTextForegroundBrush, RelativeSource={RelativeSource AncestorType=Window}}" StrokeThickness="1.5" HorizontalAlignment="Center" VerticalAlignment="Center" Width="10" Height="10" Stretch="Fill"/>
                                 </Border>
                                 <ControlTemplate.Triggers>
                                     <Trigger Property="IsMouseOver" Value="True">
                                         <Setter TargetName="Bg" Property="Background" Value="#E55B5B"/>
+                                        <Setter TargetName="IconPath" Property="Stroke" Value="White"/>
                                     </Trigger>
                                 </ControlTemplate.Triggers>
                             </ControlTemplate>
@@ -524,33 +527,51 @@
             <!-- ================= BÊN TRÁI: TODO LIST ================= -->
             <Grid Grid.Column="0">
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/> <!-- Header & Search Box -->
+                    <RowDefinition Height="Auto"/> <!-- Input form -->
+                    <RowDefinition Height="*"/>    <!-- Tasks List -->
+                    <RowDefinition Height="Auto"/> <!-- Active Focus Task footer -->
                 </Grid.RowDefinitions>
 
-                <!-- Header -->
-                <StackPanel Grid.Row="0" Margin="0,0,0,12">
-                    <TextBlock Text="Nhiệm vụ" FontSize="22" FontWeight="Bold" Foreground="{Binding TextForegroundBrush}"/>
-                </StackPanel>
-
-                <!-- Search Box [Double-Bezel nested architecture] -->
-                <Border Grid.Row="1" Background="#05FFFFFF" BorderBrush="#0AFFFFFF" BorderThickness="1" CornerRadius="12" Padding="4" Margin="0,0,0,12" WindowChrome.IsHitTestVisibleInChrome="True">
-                    <TextBox x:Name="SearchBox" Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}" 
-                             Background="{Binding TextBoxBackgroundBrush}" BorderBrush="{Binding CardBorderBrush}" Foreground="{Binding TextForegroundBrush}" 
-                             Padding="8,6" FontSize="12.5" BorderThickness="1">
-                        <TextBox.Resources>
-                            <Style TargetType="{x:Type Border}">
-                                <Setter Property="CornerRadius" Value="4"/>
-                            </Style>
-                        </TextBox.Resources>
-                    </TextBox>
-                </Border>
+                <!-- Header & Search Box Row -->
+                <Grid Grid.Row="0" Margin="0,0,0,16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <!-- Header Text (Left) -->
+                    <TextBlock Grid.Column="0" Text="Nhiệm vụ" FontSize="22" FontWeight="Bold" Foreground="{Binding TextForegroundBrush}" VerticalAlignment="Center"/>
+                    
+                    <!-- Compact Search Box (Right) -->
+                    <Border Grid.Column="1" Background="#05FFFFFF" BorderBrush="#0AFFFFFF" BorderThickness="1" CornerRadius="12" Padding="4" Width="180" VerticalAlignment="Center" WindowChrome.IsHitTestVisibleInChrome="True">
+                        <Grid>
+                            <!-- TextBox with Left padding to leave space for the magnifying glass -->
+                            <TextBox x:Name="SearchBox" Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}" 
+                                     Background="{Binding TextBoxBackgroundBrush}" BorderBrush="{Binding CardBorderBrush}" Foreground="{Binding TextForegroundBrush}" 
+                                     Padding="24,6,8,6" FontSize="12.5" BorderThickness="1">
+                                <TextBox.Resources>
+                                    <Style TargetType="{x:Type Border}">
+                                        <Setter Property="CornerRadius" Value="8"/>
+                                    </Style>
+                                </TextBox.Resources>
+                            </TextBox>
+                            <!-- Magnifying Glass Icon (dynamically colored by SelectedAccentBrush) -->
+                            <Path Data="M15.5,14L11.24,9.74C11.72,9.05 12,8.21 12,7.3C12,4.92 10.08,3 7.7,3C5.32,3 3.4,4.92 3.4,7.3C3.4,9.68 5.32,11.6 7.7,11.6C8.61,11.6 9.45,11.32 10.14,10.84L14.4,15.1L15.5,14 M5,7.3C5,5.81 6.21,4.6 7.7,4.6C9.19,4.6 10.4,5.81 10.4,7.3C10.4,8.79 9.19,10 7.7,10C6.21,10 5,8.79 5,7.3Z" 
+                                  Fill="{Binding SelectedAccentBrush}" 
+                                  Opacity="0.6"
+                                  Width="13" Height="13" 
+                                  Stretch="Fill" 
+                                  HorizontalAlignment="Left" 
+                                  VerticalAlignment="Center" 
+                                  Margin="8,0,0,0" 
+                                  IsHitTestVisible="False"/>
+                        </Grid>
+                    </Border>
+                </Grid>
 
                 <!-- Input form [Double-Bezel nested architecture] -->
-                <Border Grid.Row="2" Background="#05FFFFFF" BorderBrush="#0AFFFFFF" BorderThickness="1" CornerRadius="12" Padding="4" Margin="0,0,0,16">
+                <Border Grid.Row="1" Background="#05FFFFFF" BorderBrush="#0AFFFFFF" BorderThickness="1" CornerRadius="12" Padding="4" Margin="0,0,0,16">
                     <Border Background="{Binding CardBackgroundBrush}" BorderBrush="{Binding CardBorderBrush}" BorderThickness="1" CornerRadius="8" Padding="12">
                         <StackPanel>
                             <TextBox Text="{Binding NewTaskTitle, UpdateSourceTrigger=PropertyChanged}" 
@@ -610,8 +631,7 @@
                     </Border>
                 </Border>
 
-                <!-- Scrollable Tasks List -->
-                <ScrollViewer Grid.Row="3" VerticalScrollBarVisibility="Auto" Style="{StaticResource MinimalScrollViewer}" Focusable="False" FocusVisualStyle="{x:Null}">
+                <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" Style="{StaticResource MinimalScrollViewer}" Focusable="False" FocusVisualStyle="{x:Null}">
                     <ItemsControl ItemsSource="{Binding Tasks}" Focusable="False" FocusVisualStyle="{x:Null}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
@@ -795,7 +815,7 @@
                 </ScrollViewer>
 
                 <!-- Active Focus task footer bar -->
-                <Border Grid.Row="4" Background="{Binding CardBackgroundBrush}" BorderBrush="{Binding CardBorderBrush}" BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,16,0,0">
+                <Border Grid.Row="3" Background="{Binding CardBackgroundBrush}" BorderBrush="{Binding CardBorderBrush}" BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,16,0,0">
                     <StackPanel>
                         <TextBlock Text="ĐANG CHỌN TẬP TRUNG" FontSize="9" Foreground="{Binding SubTextForegroundBrush}" FontWeight="Bold"/>
                         <TextBlock Text="{Binding ActiveFocusTask.Title, TargetNullValue='(Chưa kích hoạt nhiệm vụ)'}" FontSize="13" FontWeight="SemiBold" Foreground="#E55B5B" Margin="0,2,0,0" TextTrimming="CharacterEllipsis"/>
@@ -828,7 +848,8 @@
                                 <ControlTemplate TargetType="Button">
                                     <Border x:Name="BtnBg" Background="Transparent" CornerRadius="15" Width="30" Height="30">
                                         <Path x:Name="IconPath" Data="M12,2C6.477,2,2,6.477,2,12s4.477,10,10,10s10-4.477,10-10S17.523,2,12,2z M16.586,16.424c-0.18,0.295-0.565,0.387-0.86,0.207 c-2.377-1.454-5.37-1.783-8.894-0.98c-0.333,0.076-0.665-0.135-0.741-0.468c-0.076-0.333,0.135-0.665,0.468-0.741 c3.856-0.88,7.15-0.51,9.819,1.123C16.663,15.748,16.756,16.129,16.586,16.424z M17.81,13.7c-0.226,0.367-0.707,0.487-1.074,0.261 c-2.72-1.672-6.868-2.157-10.084-1.181c-0.413,0.125-0.847-0.106-0.973-0.519c-0.125-0.413,0.106-0.847,0.519-0.973 c3.681-1.117,8.246-0.573,11.352,1.338C17.92,12.852,18.04,13.333,17.81,13.7z M17.915,10.865c-3.262-1.937-8.648-2.116-11.758-1.172 c-0.5,0.152-1.025-0.129-1.177-0.629C4.829,8.564,5.11,8.039,5.61,7.887c3.6-1.092,9.54-0.887,13.3,1.345 c0.45,0.267,0.597,0.844,0.33,1.294C18.973,10.976,18.365,11.123,17.915,10.865z" 
-                                              Fill="{Binding DataContext.SubTextForegroundBrush, RelativeSource={RelativeSource AncestorType=Window}}" 
+                                              Fill="{Binding DataContext.SelectedAccentBrush, RelativeSource={RelativeSource AncestorType=Window}}" 
+                                              Opacity="0.75"
                                               Width="18" Height="18" 
                                               Stretch="Fill" 
                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -836,7 +857,7 @@
                                     <ControlTemplate.Triggers>
                                         <Trigger Property="IsMouseOver" Value="True">
                                             <Setter TargetName="BtnBg" Property="Background" Value="#27272A"/>
-                                            <Setter TargetName="IconPath" Property="Fill" Value="{Binding DataContext.SelectedAccentBrush, RelativeSource={RelativeSource AncestorType=Window}}"/>
+                                            <Setter TargetName="IconPath" Property="Opacity" Value="1.0"/>
                                         </Trigger>
                                     </ControlTemplate.Triggers>
                                 </ControlTemplate>
@@ -850,7 +871,8 @@
                                     <Border x:Name="BtnBg" Background="Transparent" CornerRadius="15" Width="30" Height="30">
                                         <!-- Gear Vector Path -->
                                         <Path x:Name="IconPath" Data="M19.43,12.98C19.47,12.66 19.5,12.34 19.5,12C19.5,11.66 19.47,11.34 19.43,11.02L21.54,9.37C21.73,9.22 21.78,8.95 21.66,8.73L19.66,5.27C19.54,5.05 19.27,4.97 19.05,5.05L16.56,6.05C16.04,5.65 15.48,5.32 14.87,5.07L14.49,2.42C14.46,2.18 14.25,2 14,2H10C9.75,2 9.54,2.18 9.51,2.42L9.13,5.07C8.52,5.32 7.96,5.66 7.44,6.05L4.95,5.05C4.73,4.96 4.46,5.05 4.34,5.27L2.34,8.73C2.21,8.95 2.27,9.22 2.46,9.37L4.57,11.02C4.53,11.34 4.5,11.67 4.5,12C4.5,12.33 4.53,12.66 4.57,12.98L2.46,14.63C2.27,14.78 2.21,15.05 2.34,15.27L4.34,18.73C4.46,18.95 4.73,19.03 4.95,18.95L7.44,17.95C7.96,18.35 8.52,18.68 9.13,18.93L9.51,21.58C9.54,21.82 9.75,22 10,22H14C14.25,22 14.46,21.82 14.49,21.58L14.87,18.93C15.48,18.67 16.04,18.34 16.56,17.95L19.05,18.95C19.27,19.04 19.54,18.95 19.66,18.73L21.66,15.27C21.78,15.05 21.72,14.78 21.54,14.63L19.43,12.98ZM12,15.5C10.07,15.5 8.5,13.93 8.5,12C8.5,10.07 10.07,8.5 12,8.5C13.93,8.5 15.5,10.07 15.5,12C15.5,13.93 13.93,15.5 12,15.5Z" 
-                                              Fill="{Binding DataContext.SubTextForegroundBrush, RelativeSource={RelativeSource AncestorType=Window}}" 
+                                              Fill="{Binding DataContext.SelectedAccentBrush, RelativeSource={RelativeSource AncestorType=Window}}" 
+                                              Opacity="0.75"
                                               Width="16" Height="16" 
                                               Stretch="Fill" 
                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -858,7 +880,7 @@
                                     <ControlTemplate.Triggers>
                                         <Trigger Property="IsMouseOver" Value="True">
                                             <Setter TargetName="BtnBg" Property="Background" Value="#27272A"/>
-                                            <Setter TargetName="IconPath" Property="Fill" Value="{Binding DataContext.SelectedAccentBrush, RelativeSource={RelativeSource AncestorType=Window}}"/>
+                                            <Setter TargetName="IconPath" Property="Opacity" Value="1.0"/>
                                         </Trigger>
                                     </ControlTemplate.Triggers>
                                 </ControlTemplate>
