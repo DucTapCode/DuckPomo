@@ -1,0 +1,86 @@
+## Ignore Visual Studio temp files, build results, and database files
+
+# User-specific files
+*.rsuser
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# User-specific files (MonoDevelop/Xamarin Studio)
+*.userprefs
+
+# Mono auto-generated files
+mono_crash.*
+
+# Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+x64/
+x86/
+SDK/
+build/
+bld/
+[Bi]n/
+[Oo]bj/
+[Log]s/
+[Ff]g/
+
+# Visual Studio 2015/2017 cache/options directory
+.vs/
+# Uncomment if you have tasks that create toplevel directories
+#TestResults/
+
+# MSTest test Results
+[Tt]est[Rr]esults/
+[Bb]uild[Ll]og.*
+
+# NUnit
+*.VisualState.xml
+
+# StyleCop
+StyleCopReport.xml
+
+# Files built by Visual Studio
+*_i.c
+*_p.c
+*_h.h
+*.ilk
+*.meta
+*.obj
+*.iobj
+*.pch
+*.pdb
+*.ipdb
+*.pgc
+*.pgd
+*.rsp
+*.sbr
+*.tlb
+*.tli
+*.tlh
+*.tmp
+*.tmp_proj
+*_wpftmp.csproj
+*.log
+*.vspscc
+*.vssscc
+*.suo
+*.2015.suo
+*.user
+*.useroverride
+*.sql
+*.cache
+*.diagnostics
+*.pdb
+*.dnt
+*.deps.json
+*.runtimeconfig.json
+
+# Webview2 User Data Folders
+*WebView2UserData/
+*UserData/
+
+# RePKG outputs
+wpe_cache/

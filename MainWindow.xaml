@@ -1,0 +1,1298 @@
+<Window x:Class="Pomodoro.MainWindow"
+        x:Name="RootWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:Pomodoro"
+        xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
+        xmlns:viewmodels="clr-namespace:Pomodoro.ViewModels"
+        xmlns:converters="clr-namespace:Pomodoro.Converters"
+        mc:Ignorable="d"
+        Title="Duck Pomodoro" 
+        Height="760" Width="1100"
+        MinHeight="650" MinWidth="950"
+        WindowStartupLocation="CenterScreen"
+        WindowState="Normal"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        Foreground="{Binding TextForegroundBrush}">
+
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="40" 
+                      ResizeBorderThickness="6" 
+                      GlassFrameThickness="0" 
+                      CornerRadius="0"/>
+    </WindowChrome.WindowChrome>
+
+    <Window.Resources>
+        <!-- Converters -->
+        <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+
+        <!-- Custom Fonts -->
+        <FontFamily x:Key="MainFont">Segoe UI Variable, Segoe UI, sans-serif</FontFamily>
+        <FontFamily x:Key="MonoFont">Consolas, Courier New</FontFamily>
+
+        <!-- Base Styles -->
+        <Style TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="{StaticResource MainFont}"/>
+        </Style>
+
+        <!-- Disable Focus Dotted Visual Style system-wide -->
+        <Style TargetType="Button">
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+        </Style>
+        <Style TargetType="RadioButton">
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+        </Style>
+        <Style TargetType="ComboBox">
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+        </Style>
+        
+        <!-- Custom Premium CheckBox Style -->
+        <Style TargetType="CheckBox">
+            <Setter Property="FontFamily" Value="{StaticResource MainFont}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CheckBox">
+                        <BulletDecorator Background="Transparent">
+                            <BulletDecorator.Bullet>
+                                <Grid Width="18" Height="18" VerticalAlignment="Center">
+                                    <!-- CheckBox Box -->
+                                    <Border x:Name="Box"
+                                            Background="{Binding DataContext.TextBoxBackgroundBrush, RelativeSource={RelativeSource AncestorType=Window}}"
+                                            BorderBrush="{Binding DataContext.CardBorderBrush, RelativeSource={RelativeSource AncestorType=Window}}"
+                                            BorderThickness="1.5"
+                                            CornerRadius="4"/>
+                                    <!-- Checkmark Vector -->
+                                    <Path x:Name="Check"
+                                          Data="M4,9 L8,13 L14,5"
+                                          Stroke="#FFFFFF"
+                                          StrokeThickness="2"
+                                          StrokeStartLineCap="Round"
+                                          StrokeEndLineCap="Round"
+                                          Visibility="Collapsed"/>
+                                </Grid>
+                            </BulletDecorator.Bullet>
+                            <!-- CheckBox Content -->
+                            <ContentPresenter Margin="8,0,0,0" VerticalAlignment="Center"/>
+                        </BulletDecorator>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Box" Property="Background" Value="{Binding DataContext.SelectedAccentBrush, RelativeSource={RelativeSource AncestorType=Window}}"/>
+                                <Setter TargetName="Box" Property="BorderBrush" Value="{Binding DataContext.SelectedAccentBrush, RelativeSource={RelativeSource AncestorType=Window}}"/>
+                                <Setter TargetName="Check" Property="Visibility" Value="Visible"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Box" Property="BorderBrush" Value="#52525B"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- ScrollViewer Custom Style -->
+        <Style x:Key="MinimalScrollViewer" TargetType="ScrollViewer">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ScrollViewer">
+                        <Grid>
+                            <ScrollContentPresenter x:Name="PART_ScrollContentPresenter" CanContentScroll="{TemplateBinding CanContentScroll}"/>
+                            <ScrollBar x:Name="PART_VerticalScrollBar" 
+                                       Value="{TemplateBinding VerticalOffset}" 
+                                       Maximum="{TemplateBinding ScrollableHeight}" 
+                                       ViewportSize="{TemplateBinding ViewportHeight}" 
+                                       Visibility="{TemplateBinding ComputedVerticalScrollBarVisibility}"
+                                       HorizontalAlignment="Right" 
+                                       Width="5" 
+                                       MinWidth="5"
+                                       Margin="0,0,1,0">
+                                <ScrollBar.Template>
+                                    <ControlTemplate TargetType="ScrollBar">
+                                        <Grid x:Name="Bg" SnapsToDevicePixels="true" Background="Transparent">
+                                            <Track x:Name="PART_Track" IsDirectionReversed="true" IsEnabled="{TemplateBinding IsEnabled}">
+                                                <Track.Thumb>
+                                                    <Thumb>
+                                                        <Thumb.Template>
+                                                            <ControlTemplate TargetType="Thumb">
+                                                                <Border Background="#3F3F46" CornerRadius="2.5"/>
+                                                            </ControlTemplate>
+                                                        </Thumb.Template>
+                                                    </Thumb>
+                                                </Track.Thumb>
+                                            </Track>
+                                        </Grid>
+                                    </ControlTemplate>
+                                </ScrollBar.Template>
+                            </ScrollBar>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Modern Flat ComboBox Styling (Clickable anywhere inside box including empty spaces) -->
+        <Style x:Key="ModernComboBox" TargetType="ComboBox">
+            <Setter Property="FontFamily" Value="{StaticResource MainFont}"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Padding" Value="8,6"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBox">
+                        <Grid x:Name="MainGrid" SnapsToDevicePixels="true" Background="Transparent">
+                            <!-- ToggleButton encompasses selection display and arrow to make entire box clickable -->
+                            <ToggleButton Background="{Binding DataContext.TextBoxBackgroundBrush, RelativeSource={RelativeSource AncestorType=Window}}"
+                                          BorderBrush="{Binding DataContext.CardBorderBrush, RelativeSource={RelativeSource AncestorType=Window}}"
+                                          BorderThickness="{TemplateBinding BorderThickness}"
+                                          IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"
+                                          FocusVisualStyle="{x:Null}"
+                                          ClickMode="Press"
+                                          Cursor="Hand"
+                                          HorizontalContentAlignment="Stretch"
+                                          VerticalContentAlignment="Stretch">
+                                <ToggleButton.Template>
+                                    <ControlTemplate TargetType="ToggleButton">
+                                        <Border x:Name="Border" 
+                                                Background="{TemplateBinding Background}"
+                                                BorderBrush="{TemplateBinding BorderBrush}"
+                                                BorderThickness="{TemplateBinding BorderThickness}"
+                                                CornerRadius="6">
+                                            <!-- Set Grid background to Transparent to capture all clicks on empty spaces -->
+                                            <Grid Background="Transparent">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="22"/>
+                                                </Grid.ColumnDefinitions>
+                                                
+                                                <ContentPresenter Grid.Column="0"
+                                                                  Content="{Binding SelectionBoxItem, RelativeSource={RelativeSource AncestorType=ComboBox}}"
+                                                                  ContentTemplate="{Binding SelectionBoxItemTemplate, RelativeSource={RelativeSource AncestorType=ComboBox}}"
+                                                                  ContentTemplateSelector="{Binding ItemTemplateSelector, RelativeSource={RelativeSource AncestorType=ComboBox}}"
+                                                                  Margin="8,2"
+                                                                  VerticalAlignment="Center"
+                                                                  HorizontalAlignment="Left"
+                                                                  IsHitTestVisible="False"
+                                                                  TextBlock.Foreground="{Binding DataContext.TextForegroundBrush, RelativeSource={RelativeSource AncestorType=Window}}"/>
+                                                
+                                                <Path x:Name="Arrow" 
+                                                      Grid.Column="1"
+                                                      Data="M0,0 L4,4 L8,0" 
+                                                      Stroke="{Binding DataContext.SubTextForegroundBrush, RelativeSource={RelativeSource AncestorType=Window}}" 
+                                                      StrokeThickness="1.5" 
+                                                      HorizontalAlignment="Center" 
+                                                      VerticalAlignment="Center"
+                                                      IsHitTestVisible="False"/>
+                                            </Grid>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="Border" Property="BorderBrush" Value="#3F3F46"/>
+                                            </Trigger>
+                                            <Trigger Property="IsChecked" Value="True">
+                                                <Setter TargetName="Border" Property="BorderBrush" Value="#52525B"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </ToggleButton.Template>
+                            </ToggleButton>
+
+                            <!-- Popup dropdown list -->
+                            <Popup x:Name="PART_Popup"
+                                   AllowsTransparency="true"
+                                   IsOpen="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"
+                                   Placement="Bottom"
+                                   PopupAnimation="Fade">
+                                <Border x:Name="DropDownBorder"
+                                        Background="{Binding DataContext.CardBackgroundBrush, RelativeSource={RelativeSource AncestorType=Window}}"
+                                        BorderBrush="{Binding DataContext.CardBorderBrush, RelativeSource={RelativeSource AncestorType=Window}}"
+                                        BorderThickness="1"
+                                        CornerRadius="6"
+                                        MaxHeight="{TemplateBinding MaxDropDownHeight}"
+                                        MinWidth="{Binding ActualWidth, ElementName=MainGrid}"
+                                        Margin="0,2,0,0">
+                                    <ScrollViewer x:Name="DropDownScrollViewer" SnapsToDevicePixels="true" Style="{StaticResource MinimalScrollViewer}">
+                                        <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Contained" Margin="2"/>
+                                    </ScrollViewer>
+                                </Border>
+                            </Popup>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- ComboBoxItem Style -->
+        <Style TargetType="ComboBoxItem">
+            <Setter Property="FontFamily" Value="{StaticResource MainFont}"/>
+            <Setter Property="Padding" Value="8,6"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBoxItem">
+                        <Border x:Name="Border" 
+                                Background="{TemplateBinding Background}" 
+                                CornerRadius="4" 
+                                Margin="2,1"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter TextBlock.Foreground="{Binding DataContext.TextForegroundBrush, RelativeSource={RelativeSource AncestorType=Window}}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Border" Property="Background" Value="#27272A"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Border" Property="Background" Value="#1F6C9F"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Accent Primary Button Style -->
+        <Style x:Key="AccentButton" TargetType="Button">
+            <Setter Property="FontFamily" Value="{StaticResource MainFont}"/>
+            <Setter Property="Background" Value="#E55B5B"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="16,8"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                CornerRadius="6"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#EF7171"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter Property="Background" Value="#C94444"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Neutral Secondary Button Style -->
+        <Style x:Key="NeutralButton" TargetType="Button">
+            <Setter Property="FontFamily" Value="{StaticResource MainFont}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="16,8"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{Binding DataContext.TextBoxBackgroundBrush, RelativeSource={RelativeSource AncestorType=Window}}"
+                                BorderBrush="{Binding DataContext.CardBorderBrush, RelativeSource={RelativeSource AncestorType=Window}}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="6"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
+                                              TextBlock.Foreground="{Binding DataContext.TextForegroundBrush, RelativeSource={RelativeSource AncestorType=Window}}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#27272A"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter Property="Background" Value="#09090B"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- RadioButton mode toggle -->
+        <Style x:Key="RadioButtonMode" TargetType="RadioButton">
+            <Setter Property="FontFamily" Value="{StaticResource MainFont}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="Border" 
+                                Background="Transparent" 
+                                BorderThickness="0" 
+                                CornerRadius="15" 
+                                Padding="12,6" 
+                                Margin="2,0">
+                            <ContentPresenter x:Name="Content" 
+                                              HorizontalAlignment="Center" 
+                                              VerticalAlignment="Center"
+                                              TextBlock.Foreground="{Binding DataContext.SubTextForegroundBrush, RelativeSource={RelativeSource AncestorType=Window}}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Border" Property="Background" Value="#27272A"/>
+                                <Setter TargetName="Content" Property="TextBlock.Foreground" Value="#FFFFFF"/>
+                                <Setter Property="FontWeight" Value="SemiBold"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Border" Property="Background" Value="#1E1E22"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Grid Background="{Binding MainWindowBackgroundBrush}">
+        <Grid.RowDefinitions>
+            <!-- Custom Title bar (Height: 40) -->
+            <RowDefinition Height="40"/>
+            <!-- Main Content Area -->
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- BACKGROUND MEDIA / IMAGE PLAYER -->
+        <Grid Grid.RowSpan="2" Panel.ZIndex="-1" IsHitTestVisible="False">
+            <!-- MediaElement for Videos and GIFs -->
+            <MediaElement x:Name="BackgroundVideoPlayer"
+                          Stretch="{Binding BackgroundStretch}"
+                          RenderTransformOrigin="0.5,0.5"
+                          LoadedBehavior="Manual"
+                          UnloadedBehavior="Close"
+                          Volume="{Binding BackgroundVideoVolumeNormalized}"
+                          MediaEnded="BackgroundVideoPlayer_MediaEnded"
+                          Visibility="Collapsed">
+                <MediaElement.RenderTransform>
+                    <TransformGroup>
+                        <ScaleTransform ScaleX="{Binding BackgroundZoomX}" ScaleY="{Binding BackgroundZoomY}"/>
+                        <TranslateTransform X="{Binding BackgroundOffsetX}" Y="{Binding BackgroundOffsetY}"/>
+                    </TransformGroup>
+                </MediaElement.RenderTransform>
+            </MediaElement>
+            <!-- Image control for static images -->
+            <Image x:Name="BackgroundImagePlayer"
+                   Stretch="{Binding BackgroundStretch}"
+                   RenderTransformOrigin="0.5,0.5"
+                   Visibility="Collapsed">
+                <Image.RenderTransform>
+                    <TransformGroup>
+                        <ScaleTransform ScaleX="{Binding BackgroundZoomX}" ScaleY="{Binding BackgroundZoomY}"/>
+                        <TranslateTransform X="{Binding BackgroundOffsetX}" Y="{Binding BackgroundOffsetY}"/>
+                    </TransformGroup>
+                </Image.RenderTransform>
+            </Image>
+
+            <!-- Wallpaper Engine Web HTML Host -->
+            <wv2:WebView2 x:Name="WpeWebView" 
+                          Visibility="Collapsed"/>
+
+            <!-- COLOR CUSTOMIZATION OVERLAYS (Only active when ShowColorCustom is enabled) -->
+            <Grid Visibility="{Binding ShowColorCustom, Converter={StaticResource BoolToVisibilityConverter}}">
+                <!-- Desaturation (Gray blend) -->
+                <Border Background="#808080" Opacity="{Binding BackgroundDesaturationOpacity}"/>
+                <!-- Brightness (Black or White blend) -->
+                <Border Background="{Binding BackgroundBrightnessOverlayColor}" Opacity="{Binding BackgroundBrightnessOverlayOpacity}"/>
+                <!-- Tint (Hue Shift blend) -->
+                <Border Background="{Binding BackgroundTintBrush}" Opacity="{Binding BackgroundTintOpacity}"/>
+            </Grid>
+        </Grid>
+
+        <!-- ================= CUSTOM TITLE BAR ================= -->
+        <Border Grid.Row="0" Background="{Binding CardBackgroundBrush}" BorderBrush="{Binding CardBorderBrush}" BorderThickness="0,0,0,1" MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Window Icon & Title -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0,0,0">
+                    <Image x:Name="TitleBarIcon" Width="22" Height="22" Margin="0,0,8,0" VerticalAlignment="Center" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality"/>
+                    <TextBlock Text="Duck Pomodoro" FontSize="13" FontWeight="SemiBold" Foreground="{Binding TextForegroundBrush}" VerticalAlignment="Center"/>
+                </StackPanel>
+
+                <!-- System Control Buttons (Min, Max, Close) -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" WindowChrome.IsHitTestVisibleInChrome="True">
+                    <!-- Minimize Button -->
+                    <Button Click="MinimizeButton_Click" Background="Transparent" BorderThickness="0" Width="40" Height="40" Cursor="Hand">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border x:Name="Bg" Background="Transparent">
+                                    <Path Data="M0,0 L10,0" Stroke="#A1A1AA" StrokeThickness="2" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="Bg" Property="Background" Value="#27272A"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
+
+                    <!-- Maximize / Restore Button -->
+                    <Button Click="MaximizeButton_Click" Background="Transparent" BorderThickness="0" Width="40" Height="40" Cursor="Hand">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border x:Name="Bg" Background="Transparent">
+                                    <Path Data="M0,0 L10,0 L10,10 L0,10 Z" Stroke="#A1A1AA" StrokeThickness="1.5" Fill="Transparent" HorizontalAlignment="Center" VerticalAlignment="Center" Width="10" Height="10" Stretch="Fill"/>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="Bg" Property="Background" Value="#27272A"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
+
+                    <!-- Close Button -->
+                    <Button Click="CloseButton_Click" Background="Transparent" BorderThickness="0" Width="45" Height="40" Cursor="Hand">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border x:Name="Bg" Background="Transparent">
+                                    <Path Data="M0,0 L10,10 M10,0 L0,10" Stroke="#A1A1AA" StrokeThickness="1.5" HorizontalAlignment="Center" VerticalAlignment="Center" Width="10" Height="10" Stretch="Fill"/>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="Bg" Property="Background" Value="#E55B5B"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- ================= MAIN CONTENT AREA ================= -->
+        <Grid Grid.Row="1" Margin="24">
+            <Grid.ColumnDefinitions>
+                <!-- LEFT COLUMN: TODO LIST -->
+                <ColumnDefinition x:Name="TodoColumn" Width="3.5*" MinWidth="180"/>
+                <!-- GAP / GRID SPLITTER -->
+                <ColumnDefinition Width="32"/>
+                <!-- RIGHT COLUMN: POMODORO TIMER -->
+                <ColumnDefinition x:Name="PomoColumn" Width="6.5*" MinWidth="320"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- GridSplitter with visual hover handle -->
+            <GridSplitter Grid.Column="1" 
+                          Width="16" 
+                          HorizontalAlignment="Center" 
+                          VerticalAlignment="Stretch" 
+                          Background="Transparent"
+                          Cursor="SizeWE">
+                <GridSplitter.Template>
+                    <ControlTemplate TargetType="GridSplitter">
+                        <Border Background="Transparent" Width="16">
+                            <!-- Visual line in middle of split area -->
+                            <Border x:Name="VisualLine"
+                                    Width="3" 
+                                    Background="{Binding DataContext.CardBorderBrush, ElementName=RootWindow}" 
+                                    CornerRadius="1.5"
+                                    HorizontalAlignment="Center" 
+                                    VerticalAlignment="Stretch"
+                                    Margin="0,40"
+                                    Opacity="0.5"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="VisualLine" Property="Background" Value="{Binding DataContext.SelectedAccentBrush, ElementName=RootWindow}"/>
+                                <Setter TargetName="VisualLine" Property="Opacity" Value="1.0"/>
+                                <Setter TargetName="VisualLine" Property="Width" Value="5"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </GridSplitter.Template>
+            </GridSplitter>
+
+            <!-- ================= BÊN TRÁI: TODO LIST ================= -->
+            <Grid Grid.Column="0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- Header -->
+                <StackPanel Grid.Row="0" Margin="0,0,0,12">
+                    <TextBlock Text="Nhiệm vụ" FontSize="22" FontWeight="Bold" Foreground="{Binding TextForegroundBrush}"/>
+                </StackPanel>
+
+                <!-- Search Box [Double-Bezel nested architecture] -->
+                <Border Grid.Row="1" Background="#05FFFFFF" BorderBrush="#0AFFFFFF" BorderThickness="1" CornerRadius="12" Padding="4" Margin="0,0,0,12" WindowChrome.IsHitTestVisibleInChrome="True">
+                    <TextBox x:Name="SearchBox" Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}" 
+                             Background="{Binding TextBoxBackgroundBrush}" BorderBrush="{Binding CardBorderBrush}" Foreground="{Binding TextForegroundBrush}" 
+                             Padding="8,6" FontSize="12.5" BorderThickness="1">
+                        <TextBox.Resources>
+                            <Style TargetType="{x:Type Border}">
+                                <Setter Property="CornerRadius" Value="4"/>
+                            </Style>
+                        </TextBox.Resources>
+                    </TextBox>
+                </Border>
+
+                <!-- Input form [Double-Bezel nested architecture] -->
+                <Border Grid.Row="2" Background="#05FFFFFF" BorderBrush="#0AFFFFFF" BorderThickness="1" CornerRadius="12" Padding="4" Margin="0,0,0,16">
+                    <Border Background="{Binding CardBackgroundBrush}" BorderBrush="{Binding CardBorderBrush}" BorderThickness="1" CornerRadius="8" Padding="12">
+                        <StackPanel>
+                            <TextBox Text="{Binding NewTaskTitle, UpdateSourceTrigger=PropertyChanged}" 
+                                     Background="{Binding TextBoxBackgroundBrush}" BorderBrush="{Binding CardBorderBrush}" Foreground="{Binding TextForegroundBrush}" 
+                                     Padding="8" FontSize="13" Margin="0,0,0,8">
+                                <TextBox.InputBindings>
+                                    <KeyBinding Key="Enter" Command="{Binding AddTaskCommand}"/>
+                                </TextBox.InputBindings>
+                                <TextBox.Resources>
+                                    <Style TargetType="{x:Type Border}">
+                                        <Setter Property="CornerRadius" Value="4"/>
+                                    </Style>
+                                </TextBox.Resources>
+                            </TextBox>
+                            
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                
+                                <!-- Dropdown Selectors -->
+                                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                                    <!-- Priority selector -->
+                                    <ComboBox SelectedValue="{Binding NewTaskPriority}" SelectedValuePath="Content" Style="{StaticResource ModernComboBox}" Width="85" Height="28" Margin="0,0,8,0">
+                                        <ComboBoxItem Content="High"/>
+                                        <ComboBoxItem Content="Medium" IsSelected="True"/>
+                                        <ComboBoxItem Content="Low"/>
+                                    </ComboBox>
+
+                                    <!-- Tag selector -->
+                                    <ComboBox SelectedValue="{Binding NewTaskTag}" SelectedValuePath="Content" Style="{StaticResource ModernComboBox}" Width="85" Height="28" Margin="0,0,8,0">
+                                        <ComboBoxItem Content="Work" IsSelected="True"/>
+                                        <ComboBoxItem Content="Study"/>
+                                        <ComboBoxItem Content="Personal"/>
+                                        <ComboBoxItem Content="Health"/>
+                                    </ComboBox>
+
+                                    <!-- Est Pomodoros -->
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <TextBlock Text="Est:" FontSize="10" Foreground="{Binding SubTextForegroundBrush}" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                        <ComboBox SelectedValue="{Binding NewTaskEstimate}" SelectedValuePath="Content" Style="{StaticResource ModernComboBox}" Width="50" Height="28">
+                                            <ComboBoxItem Content="1" IsSelected="True"/>
+                                            <ComboBoxItem Content="2"/>
+                                            <ComboBoxItem Content="3"/>
+                                            <ComboBoxItem Content="4"/>
+                                            <ComboBoxItem Content="5"/>
+                                            <ComboBoxItem Content="8"/>
+                                        </ComboBox>
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <!-- Add button -->
+                                <Button Grid.Column="1" Command="{Binding AddTaskCommand}" Style="{StaticResource AccentButton}" Content="Thêm" Width="60" Height="28" Padding="0"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+                </Border>
+
+                <!-- Scrollable Tasks List -->
+                <ScrollViewer Grid.Row="3" VerticalScrollBarVisibility="Auto" Style="{StaticResource MinimalScrollViewer}" Focusable="False" FocusVisualStyle="{x:Null}">
+                    <ItemsControl ItemsSource="{Binding Tasks}" Focusable="False" FocusVisualStyle="{x:Null}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <!-- Task Card Outer Shell [Double-Bezel nested architecture] -->
+                                <Border Background="#05FFFFFF" BorderBrush="#0AFFFFFF" BorderThickness="1" CornerRadius="12" Padding="4" Margin="0,0,0,8">
+                                    <!-- Task Card Inner Core -->
+                                    <Border x:Name="TaskCard" Background="{Binding DataContext.CardBackgroundBrush, ElementName=RootWindow}" BorderBrush="{Binding DataContext.CardBorderBrush, ElementName=RootWindow}" BorderThickness="1" CornerRadius="8" Padding="12" Cursor="Hand" SnapsToDevicePixels="True"
+                                            MouseEnter="TaskCard_MouseEnter" MouseLeave="TaskCard_MouseLeave" AllowDrop="True" Drop="TaskCard_Drop">
+                                        <Border.InputBindings>
+                                            <MouseBinding Gesture="LeftClick" Command="{Binding DataContext.SelectFocusTaskCommand, ElementName=RootWindow}" CommandParameter="{Binding}"/>
+                                        </Border.InputBindings>
+                                    <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+                                        
+                                        <!-- Main Card Grid -->
+                                        <Grid Grid.Row="0">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+
+                                            <!-- Completion Checkbox -->
+                                            <Button Grid.Column="0" Command="{Binding DataContext.ToggleCompleteTaskCommand, ElementName=RootWindow}" CommandParameter="{Binding}" Background="Transparent" BorderThickness="0" Margin="0,0,10,0" Focusable="False" FocusVisualStyle="{x:Null}">
+                                                <Button.Template>
+                                                    <ControlTemplate TargetType="Button">
+                                                        <Grid Width="18" Height="18">
+                                                            <Border x:Name="Box" BorderBrush="#3F3F46" BorderThickness="1" CornerRadius="3" Background="Transparent"/>
+                                                            <Path x:Name="Check" Data="M2,8 L6,12 L13,2" Stroke="#81C784" StrokeThickness="2" Visibility="Collapsed"/>
+                                                        </Grid>
+                                                        <ControlTemplate.Triggers>
+                                                            <DataTrigger Binding="{Binding IsCompleted}" Value="True">
+                                                                <Setter TargetName="Box" Property="Background" Value="#2681C784"/>
+                                                                <Setter TargetName="Box" Property="BorderBrush" Value="#81C784"/>
+                                                                <Setter TargetName="Check" Property="Visibility" Value="Visible"/>
+                                                            </DataTrigger>
+                                                        </ControlTemplate.Triggers>
+                                                    </ControlTemplate>
+                                                </Button.Template>
+                                            </Button>
+
+                                            <!-- Info -->
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                <!-- Markdown Enabled TextBlock with element name binding for reliability -->
+                                                <TextBlock x:Name="TxtTitle" converters:TextBlockExtensions.Markdown="{Binding Title}" FontSize="13.5" FontWeight="SemiBold" Foreground="{Binding DataContext.TextForegroundBrush, ElementName=RootWindow}" TextWrapping="Wrap"/>
+                                                
+                                                <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                                    <!-- Priority -->
+                                                    <Border x:Name="PriorityPill" CornerRadius="3" Padding="5,0.5" Margin="0,0,6,0">
+                                                        <TextBlock x:Name="TxtPriority" Text="{Binding Priority}" FontSize="9" FontWeight="Bold"/>
+                                                    </Border>
+
+                                                    <!-- Tag -->
+                                                    <Border x:Name="TagPill" CornerRadius="3" Padding="5,0.5" Margin="0,0,6,0" Background="#261E90FF">
+                                                        <TextBlock Text="{Binding Tag}" Foreground="#64B5F6" FontSize="9" FontWeight="Bold"/>
+                                                    </Border>
+
+                                                    <!-- Est Pomos -->
+                                                    <TextBlock FontSize="9" Foreground="{Binding DataContext.SubTextForegroundBrush, ElementName=RootWindow}" VerticalAlignment="Center">
+                                                        <Run Text="Est: "/>
+                                                        <Run Text="{Binding CompletedPomodoros}"/>
+                                                        <Run Text="/"/>
+                                                        <Run Text="{Binding EstimatedPomodoros}"/>
+                                                    </TextBlock>
+                                                </StackPanel>
+                                            </StackPanel>
+
+                                            <!-- Actions Bar (Clone, Watch/Pin, Delete) -->
+                                            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" WindowChrome.IsHitTestVisibleInChrome="True">
+                                                <!-- Clone/Copy -->
+                                                <Button Command="{Binding DataContext.CloneTaskCommand, ElementName=RootWindow}" CommandParameter="{Binding}" Background="Transparent" BorderThickness="0" Width="20" Height="20" Cursor="Hand" ToolTip="Nhân bản thẻ" Margin="0,0,6,0" Focusable="False" FocusVisualStyle="{x:Null}">
+                                                    <Button.Template>
+                                                        <ControlTemplate TargetType="Button">
+                                                            <Border x:Name="Bg" Background="Transparent" Padding="3">
+                                                                <Path Data="M3,3 H9 V11 H3 Z M5,1 H11 V9" Stroke="#A1A1AA" StrokeThickness="1.2" Fill="Transparent" Stretch="Fill"/>
+                                                            </Border>
+                                                            <ControlTemplate.Triggers>
+                                                                <Trigger Property="IsMouseOver" Value="True">
+                                                                    <Setter Property="Opacity" Value="0.6"/>
+                                                                </Trigger>
+                                                            </ControlTemplate.Triggers>
+                                                        </ControlTemplate>
+                                                    </Button.Template>
+                                                </Button>
+
+                                                 <!-- Watch/Pin status -->
+                                                 <Button Command="{Binding DataContext.ToggleWatchTaskCommand, ElementName=RootWindow}" CommandParameter="{Binding}" Background="Transparent" BorderThickness="0" Width="20" Height="20" Cursor="Hand" Margin="0,0,6,0" Focusable="False" FocusVisualStyle="{x:Null}">
+                                                     <Button.Template>
+                                                         <ControlTemplate TargetType="Button">
+                                                             <Border x:Name="Bg" Background="Transparent" Padding="4">
+                                                                 <Path x:Name="PinPath" Data="M4,2 H12 V16 L8,12 L4,16 Z" Stroke="#A1A1AA" StrokeThickness="1.2" Fill="Transparent" Stretch="Fill" Opacity="0.4"/>
+                                                             </Border>
+                                                             <ControlTemplate.Triggers>
+                                                                 <DataTrigger Binding="{Binding IsWatched}" Value="True">
+                                                                     <Setter TargetName="PinPath" Property="Fill" Value="{Binding DataContext.SelectedAccentBrush, ElementName=RootWindow}"/>
+                                                                     <Setter TargetName="PinPath" Property="Stroke" Value="{Binding DataContext.SelectedAccentBrush, ElementName=RootWindow}"/>
+                                                                     <Setter TargetName="PinPath" Property="Opacity" Value="1.0"/>
+                                                                 </DataTrigger>
+                                                                 <Trigger Property="IsMouseOver" Value="True">
+                                                                     <Setter TargetName="PinPath" Property="Opacity" Value="1.0"/>
+                                                                 </Trigger>
+                                                             </ControlTemplate.Triggers>
+                                                         </ControlTemplate>
+                                                     </Button.Template>
+                                                 </Button>
+
+                                                <!-- Delete Button -->
+                                                <Button Command="{Binding DataContext.DeleteTaskCommand, ElementName=RootWindow}" CommandParameter="{Binding}" VerticalAlignment="Center" Background="Transparent" BorderThickness="0" Cursor="Hand" Padding="4" Focusable="False" FocusVisualStyle="{x:Null}">
+                                                    <Button.Template>
+                                                        <ControlTemplate TargetType="Button">
+                                                                <Path Data="M3,6 L17,6 M5,6 L5,16 C5,17 6,18 7,18 L13,18 C14,18 15,17 15,16 L15,6" Stroke="#A1A1AA" StrokeThickness="1.2" Fill="Transparent" Width="12" Height="14" Stretch="Fill"/>
+                                                        <ControlTemplate.Triggers>
+                                                            <Trigger Property="IsMouseOver" Value="True">
+                                                                <Setter Property="Opacity" Value="0.6"/>
+                                                            </Trigger>
+                                                        </ControlTemplate.Triggers>
+                                                    </ControlTemplate>
+                                                </Button.Template>
+                                            </Button>
+                                        </StackPanel>
+                                    </Grid>
+
+                                    <!-- Attachments row -->
+                                    <Grid Grid.Row="1" Margin="28,4,0,0" Visibility="{Binding Attachments.Count, Converter={StaticResource BoolToVisibilityConverter}}">
+                                        <StackPanel>
+                                            <TextBlock Text="Tệp đính kèm (Kéo thả file vào đây):" FontSize="9.5" Foreground="#71717A" FontWeight="Bold"/>
+                                            <ItemsControl ItemsSource="{Binding Attachments}" Margin="0,2,0,0">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Grid Margin="0,1,0,0">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="*"/>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                            </Grid.ColumnDefinitions>
+                                                            <TextBlock Text="{Binding}" FontSize="10" Foreground="#64B5F6" TextTrimming="CharacterEllipsis" Cursor="Hand" ToolTip="Click để mở tệp tin" VerticalAlignment="Center">
+                                                                <TextBlock.InputBindings>
+                                                                    <MouseBinding Gesture="LeftClick" Command="{Binding DataContext.OpenAttachmentCommand, ElementName=RootWindow}" CommandParameter="{Binding}"/>
+                                                                </TextBlock.InputBindings>
+                                                            </TextBlock>
+                                                            <Button Grid.Column="1" Click="RemoveAttachmentButton_Click" Background="Transparent" BorderThickness="0" Cursor="Hand" Margin="8,0,0,0" VerticalAlignment="Center" Focusable="False" FocusVisualStyle="{x:Null}">
+                                                                <Button.Template>
+                                                                    <ControlTemplate TargetType="Button">
+                                                                        <TextBlock Text="✕" FontSize="9" Foreground="#EF7171"/>
+                                                                    </ControlTemplate>
+                                                                </Button.Template>
+                                                            </Button>
+                                                        </Grid>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+                                    </Grid>
+                                    </Grid>
+                                </Border>
+                                </Border>
+                                
+                                <DataTemplate.Triggers>
+                                    <DataTrigger Binding="{Binding IsCompleted}" Value="True">
+                                        <Setter TargetName="TxtTitle" Property="TextDecorations" Value="Strikethrough"/>
+                                        <Setter TargetName="TxtTitle" Property="Foreground" Value="#71717A"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding Priority}" Value="High">
+                                        <Setter TargetName="PriorityPill" Property="Background" Value="#26E55B5B"/>
+                                        <Setter TargetName="TxtPriority" Property="Foreground" Value="#E55B5B"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding Priority}" Value="Medium">
+                                        <Setter TargetName="PriorityPill" Property="Background" Value="#26F0AD4E"/>
+                                        <Setter TargetName="TxtPriority" Property="Foreground" Value="#F0AD4E"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding Priority}" Value="Low">
+                                        <Setter TargetName="PriorityPill" Property="Background" Value="#265CB85C"/>
+                                        <Setter TargetName="TxtPriority" Property="Foreground" Value="#5CB85C"/>
+                                    </DataTrigger>
+                                </DataTemplate.Triggers>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+
+                <!-- Active Focus task footer bar -->
+                <Border Grid.Row="4" Background="{Binding CardBackgroundBrush}" BorderBrush="{Binding CardBorderBrush}" BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,16,0,0">
+                    <StackPanel>
+                        <TextBlock Text="ĐANG CHỌN TẬP TRUNG" FontSize="9" Foreground="{Binding SubTextForegroundBrush}" FontWeight="Bold"/>
+                        <TextBlock Text="{Binding ActiveFocusTask.Title, TargetNullValue='(Chưa kích hoạt nhiệm vụ)'}" FontSize="13" FontWeight="SemiBold" Foreground="#E55B5B" Margin="0,2,0,0" TextTrimming="CharacterEllipsis"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <!-- ================= BÊN PHẢI: POMODORO TIMER ================= -->
+            <Grid Grid.Column="2">
+                <Grid.RowDefinitions>
+                    <!-- Header with Gear Icon -->
+                    <RowDefinition Height="Auto"/>
+                    <!-- Main Timer display card -->
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- Top bar with Settings toggle -->
+                <Grid Grid.Row="0" Margin="0,0,0,16" WindowChrome.IsHitTestVisibleInChrome="True">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <TextBlock Text="Đồng hồ tập trung" FontSize="22" FontWeight="Bold" Foreground="{Binding TextForegroundBrush}" VerticalAlignment="Center"/>
+                    
+                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                        <!-- Spotify Icon Button -->
+                        <Button Click="SpotifyButton_Click" Background="Transparent" BorderThickness="0" Cursor="Hand" Padding="4" Margin="0,0,8,0">
+                            <Button.Template>
+                                <ControlTemplate TargetType="Button">
+                                    <Border x:Name="BtnBg" Background="Transparent" CornerRadius="15" Width="30" Height="30">
+                                        <Path x:Name="IconPath" Data="M12,2C6.477,2,2,6.477,2,12s4.477,10,10,10s10-4.477,10-10S17.523,2,12,2z M16.586,16.424c-0.18,0.295-0.565,0.387-0.86,0.207 c-2.377-1.454-5.37-1.783-8.894-0.98c-0.333,0.076-0.665-0.135-0.741-0.468c-0.076-0.333,0.135-0.665,0.468-0.741 c3.856-0.88,7.15-0.51,9.819,1.123C16.663,15.748,16.756,16.129,16.586,16.424z M17.81,13.7c-0.226,0.367-0.707,0.487-1.074,0.261 c-2.72-1.672-6.868-2.157-10.084-1.181c-0.413,0.125-0.847-0.106-0.973-0.519c-0.125-0.413,0.106-0.847,0.519-0.973 c3.681-1.117,8.246-0.573,11.352,1.338C17.92,12.852,18.04,13.333,17.81,13.7z M17.915,10.865c-3.262-1.937-8.648-2.116-11.758-1.172 c-0.5,0.152-1.025-0.129-1.177-0.629C4.829,8.564,5.11,8.039,5.61,7.887c3.6-1.092,9.54-0.887,13.3,1.345 c0.45,0.267,0.597,0.844,0.33,1.294C18.973,10.976,18.365,11.123,17.915,10.865z" 
+                                              Fill="{Binding DataContext.SubTextForegroundBrush, RelativeSource={RelativeSource AncestorType=Window}}" 
+                                              Width="18" Height="18" 
+                                              Stretch="Fill" 
+                                              HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="BtnBg" Property="Background" Value="#27272A"/>
+                                            <Setter TargetName="IconPath" Property="Fill" Value="{Binding DataContext.SelectedAccentBrush, RelativeSource={RelativeSource AncestorType=Window}}"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Button.Template>
+                        </Button>
+
+                        <!-- Gear Settings Icon Button -->
+                        <Button Command="{Binding ToggleSettingsCommand}" Background="Transparent" BorderThickness="0" Cursor="Hand" Padding="4">
+                            <Button.Template>
+                                <ControlTemplate TargetType="Button">
+                                    <Border x:Name="BtnBg" Background="Transparent" CornerRadius="15" Width="30" Height="30">
+                                        <!-- Gear Vector Path -->
+                                        <Path x:Name="IconPath" Data="M19.43,12.98C19.47,12.66 19.5,12.34 19.5,12C19.5,11.66 19.47,11.34 19.43,11.02L21.54,9.37C21.73,9.22 21.78,8.95 21.66,8.73L19.66,5.27C19.54,5.05 19.27,4.97 19.05,5.05L16.56,6.05C16.04,5.65 15.48,5.32 14.87,5.07L14.49,2.42C14.46,2.18 14.25,2 14,2H10C9.75,2 9.54,2.18 9.51,2.42L9.13,5.07C8.52,5.32 7.96,5.66 7.44,6.05L4.95,5.05C4.73,4.96 4.46,5.05 4.34,5.27L2.34,8.73C2.21,8.95 2.27,9.22 2.46,9.37L4.57,11.02C4.53,11.34 4.5,11.67 4.5,12C4.5,12.33 4.53,12.66 4.57,12.98L2.46,14.63C2.27,14.78 2.21,15.05 2.34,15.27L4.34,18.73C4.46,18.95 4.73,19.03 4.95,18.95L7.44,17.95C7.96,18.35 8.52,18.68 9.13,18.93L9.51,21.58C9.54,21.82 9.75,22 10,22H14C14.25,22 14.46,21.82 14.49,21.58L14.87,18.93C15.48,18.67 16.04,18.34 16.56,17.95L19.05,18.95C19.27,19.04 19.54,18.95 19.66,18.73L21.66,15.27C21.78,15.05 21.72,14.78 21.54,14.63L19.43,12.98ZM12,15.5C10.07,15.5 8.5,13.93 8.5,12C8.5,10.07 10.07,8.5 12,8.5C13.93,8.5 15.5,10.07 15.5,12C15.5,13.93 13.93,15.5 12,15.5Z" 
+                                              Fill="{Binding DataContext.SubTextForegroundBrush, RelativeSource={RelativeSource AncestorType=Window}}" 
+                                              Width="16" Height="16" 
+                                              Stretch="Fill" 
+                                              HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="BtnBg" Property="Background" Value="#27272A"/>
+                                            <Setter TargetName="IconPath" Property="Fill" Value="{Binding DataContext.SelectedAccentBrush, RelativeSource={RelativeSource AncestorType=Window}}"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Button.Template>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+
+                <!-- Core Timer Panel [Double-Bezel nested architecture] -->
+                <Border Grid.Row="1" Background="#05FFFFFF" BorderBrush="#0AFFFFFF" BorderThickness="1" CornerRadius="12" Padding="4">
+                    <Border Background="{Binding CardBackgroundBrush}" BorderBrush="{Binding CardBorderBrush}" BorderThickness="1" CornerRadius="8" Padding="24">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <!-- Top: Switch buttons -->
+                            <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,16" WindowChrome.IsHitTestVisibleInChrome="True">
+                                <RadioButton Content="Tập trung" IsChecked="True" Command="{Binding SwitchModeCommand}" CommandParameter="Focus" Style="{StaticResource RadioButtonMode}"/>
+                                <RadioButton Content="Nghỉ ngắn" Command="{Binding SwitchModeCommand}" CommandParameter="Short Break" Style="{StaticResource RadioButtonMode}"/>
+                                <RadioButton Content="Nghỉ dài" Command="{Binding SwitchModeCommand}" CommandParameter="Long Break" Style="{StaticResource RadioButtonMode}"/>
+                            </StackPanel>
+
+                            <!-- Middle: Big Timer Text wrapped in Viewbox for Responsive Scaling -->
+                            <Viewbox Grid.Row="1" MaxHeight="300" MaxWidth="400" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="10">
+                                <StackPanel>
+                                    <TextBlock Text="{Binding TimerText}" FontSize="88" FontWeight="Light" HorizontalAlignment="Center" Foreground="{Binding TextForegroundBrush}" Margin="0,-10,0,0"/>
+                                    <TextBlock Text="{Binding TimerMode}" FontSize="12" FontWeight="SemiBold" Foreground="{Binding SubTextForegroundBrush}" HorizontalAlignment="Center"/>
+
+                                    <!-- Progress line underneath -->
+                                    <Border Background="#1E1E22" CornerRadius="2.5" Height="5" Width="240" Margin="0,20,0,0">
+                                        <ProgressBar Value="{Binding ProgressValue}" Minimum="0" Maximum="1" Foreground="{Binding SelectedAccentBrush}" Height="5" BorderThickness="0" Background="Transparent"/>
+                                    </Border>
+                                </StackPanel>
+                            </Viewbox>
+
+                            <!-- Bottom: Actions -->
+                            <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,16,0,0" WindowChrome.IsHitTestVisibleInChrome="True">
+                                <!-- Start / Pause -->
+                                <Button Command="{Binding StartTimerCommand}" Style="{StaticResource AccentButton}" Content="Bắt đầu" Width="130" Height="40" Margin="0,0,12,0" Visibility="{Binding IsRunning, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse}"/>
+                                <Button Command="{Binding PauseTimerCommand}" Style="{StaticResource NeutralButton}" Content="Tạm dừng" Width="130" Height="40" Margin="0,0,12,0" Visibility="{Binding IsRunning, Converter={StaticResource BoolToVisibilityConverter}}"/>
+
+                                <!-- Reset / Give Up -->
+                                <Button Command="{Binding ResetTimerCommand}" Style="{StaticResource NeutralButton}" Content="Bỏ cuộc" Width="100" Height="40"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                </Border>
+            </Grid>
+        </Grid>
+
+        <!-- ================= DRAWER POPUP ================= -->
+        <Grid Grid.Row="1" Background="#7F000000" Visibility="{Binding IsSettingsVisible, Converter={StaticResource BoolToVisibilityConverter}}" Panel.ZIndex="10">
+            <!-- Click background to close -->
+            <Grid.InputBindings>
+                <MouseBinding Gesture="LeftClick" Command="{Binding ToggleSettingsCommand}"/>
+            </Grid.InputBindings>
+            
+            <!-- Slide drawer container -->
+            <Border HorizontalAlignment="Right" Width="400" Background="{Binding CardBackgroundBrush}" BorderBrush="{Binding CardBorderBrush}" BorderThickness="1,0,0,0" SnapsToDevicePixels="True" WindowChrome.IsHitTestVisibleInChrome="True">
+                <Border.InputBindings>
+                    <!-- Stop mouse clicks inside drawer from closing it -->
+                    <MouseBinding Gesture="LeftClick" Command="{Binding ToggleSettingsCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="SuppressClose"/>
+                </Border.InputBindings>
+                
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Drawer Header -->
+                    <Grid Grid.Row="0" Margin="24,24,24,16">
+                        <TextBlock Text="Cấu hình &amp; Thống kê" FontSize="18" FontWeight="Bold" Foreground="{Binding TextForegroundBrush}" VerticalAlignment="Center"/>
+                        
+                        <!-- Close button -->
+                        <Button Command="{Binding ToggleSettingsCommand}" HorizontalAlignment="Right" Background="Transparent" BorderThickness="0" Cursor="Hand" Padding="4">
+                            <Button.Template>
+                                <ControlTemplate TargetType="Button">
+                                    <TextBlock Text="✕" FontSize="16" Foreground="{Binding SubTextForegroundBrush}" FontWeight="Bold"/>
+                                </ControlTemplate>
+                            </Button.Template>
+                        </Button>
+                    </Grid>
+
+                    <!-- Scrollable contents (Goes right against the edge, Margin left 24, margin right 0) -->
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Style="{StaticResource MinimalScrollViewer}" Margin="24,0,0,0">
+                        <StackPanel Margin="0,0,24,0">
+                            <!-- SECTION 1: TIMERS -->
+                            <TextBlock Text="CÀI ĐẶT THỜI GIAN (PHÚT)" FontSize="10" FontWeight="Bold" Foreground="{Binding SubTextForegroundBrush}" Margin="0,0,0,12"/>
+                            
+                            <Grid Margin="0,0,0,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="80"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Thời gian Focus" FontSize="13" Foreground="{Binding TextForegroundBrush}" VerticalAlignment="Center"/>
+                                <TextBox Grid.Column="1" Text="{Binding Settings.FocusDurationMinutes, UpdateSourceTrigger=PropertyChanged}" Background="{Binding TextBoxBackgroundBrush}" BorderBrush="{Binding CardBorderBrush}" Foreground="{Binding TextForegroundBrush}" Padding="4" HorizontalContentAlignment="Center"/>
+                            </Grid>
+
+                            <Grid Margin="0,0,0,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="80"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Nghỉ ngắn" FontSize="13" Foreground="{Binding TextForegroundBrush}" VerticalAlignment="Center"/>
+                                <TextBox Grid.Column="1" Text="{Binding Settings.ShortBreakDurationMinutes, UpdateSourceTrigger=PropertyChanged}" Background="{Binding TextBoxBackgroundBrush}" BorderBrush="{Binding CardBorderBrush}" Foreground="{Binding TextForegroundBrush}" Padding="4" HorizontalContentAlignment="Center"/>
+                            </Grid>
+
+                            <Grid Margin="0,0,0,16">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="80"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Nghỉ dài" FontSize="13" Foreground="{Binding TextForegroundBrush}" VerticalAlignment="Center"/>
+                                <TextBox Grid.Column="1" Text="{Binding Settings.LongBreakDurationMinutes, UpdateSourceTrigger=PropertyChanged}" Background="{Binding TextBoxBackgroundBrush}" BorderBrush="{Binding CardBorderBrush}" Foreground="{Binding TextForegroundBrush}" Padding="4" HorizontalContentAlignment="Center"/>
+                            </Grid>
+
+                            <!-- SECTION 2: AUDIO -->
+                            <Border BorderBrush="{Binding CardBorderBrush}" BorderThickness="0,1,0,0" Padding="0,16,0,0" Margin="0,0,0,16">
+                                <StackPanel>
+                                    <TextBlock Text="CÀI ĐẶT ÂM THANH" FontSize="10" FontWeight="Bold" Foreground="{Binding SubTextForegroundBrush}" Margin="0,0,0,12"/>
+                                    
+                                    <!-- Alarm Sound selection -->
+                                    <TextBlock Text="Âm báo khi hoàn thành (Alarm)" FontSize="12" Foreground="{Binding TextForegroundBrush}" Margin="0,0,0,6"/>
+                                    <ComboBox SelectedValue="{Binding SelectedAlarmSound}" SelectedValuePath="Content" Style="{StaticResource ModernComboBox}" Height="30" Margin="0,0,0,12">
+                                        <ComboBoxItem Content="Bell"/>
+                                        <ComboBoxItem Content="Bird"/>
+                                        <ComboBoxItem Content="Digital"/>
+                                        <ComboBoxItem Content="Kitchen"/>
+                                        <ComboBoxItem Content="Wood"/>
+                                    </ComboBox>
+
+                                    <!-- Focus Sound (Ambient) selection -->
+                                    <TextBlock Text="Âm thanh nền tập trung (Focus)" FontSize="12" Foreground="{Binding TextForegroundBrush}" Margin="0,0,0,6"/>
+                                    <ComboBox SelectedValue="{Binding SelectedAmbientSound}" SelectedValuePath="Content" Style="{StaticResource ModernComboBox}" Height="30" Margin="0,0,0,10">
+                                        <ComboBoxItem Content="None"/>
+                                        <ComboBoxItem Content="Ticking Fast"/>
+                                        <ComboBoxItem Content="Ticking Slow"/>
+                                        <ComboBoxItem Content="White Noise"/>
+                                        <ComboBoxItem Content="Brown Noise"/>
+                                    </ComboBox>
+
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="🔊" FontSize="12" Foreground="{Binding SubTextForegroundBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                        <Slider Grid.Column="1" Value="{Binding AmbientVolume}" Minimum="0.0" Maximum="1.0" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- SECTION 3: OPTIONS -->
+                            <Border BorderBrush="{Binding CardBorderBrush}" BorderThickness="0,1,0,0" Padding="0,16,0,0" Margin="0,0,0,16">
+                                <StackPanel>
+                                    <TextBlock Text="TÙY CHỌN NÂNG CAO" FontSize="10" FontWeight="Bold" Foreground="{Binding SubTextForegroundBrush}" Margin="0,0,0,12"/>
+                                    
+                                    <CheckBox IsChecked="{Binding Settings.AutoStartNextSession}" Margin="0,0,0,8" Foreground="{Binding TextForegroundBrush}">
+                                        <TextBlock Text="Tự động chuyển phiên khi hết giờ" FontSize="12" Foreground="{Binding TextForegroundBrush}" Margin="4,-2,0,0"/>
+                                    </CheckBox>
+
+                                    <CheckBox IsChecked="{Binding Settings.IsStrictModeEnabled}" Margin="0,0,0,8" Foreground="{Binding TextForegroundBrush}">
+                                        <TextBlock Text="Strict Mode (Bắt buộc tập trung)" FontSize="12" Foreground="{Binding TextForegroundBrush}" Margin="4,-2,0,0"/>
+                                    </CheckBox>
+
+                                    <CheckBox IsChecked="{Binding Settings.IsAutoStartWithWindows}" Margin="0,0,0,8" Foreground="{Binding TextForegroundBrush}">
+                                        <TextBlock Text="Khởi động cùng Windows" FontSize="12" Foreground="{Binding TextForegroundBrush}" Margin="4,-2,0,0"/>
+                                    </CheckBox>
+
+                                     <!-- UI Theme selection -->
+                                     <TextBlock Text="CHỦ ĐỀ GIAO DIỆN NỀN" FontSize="10" FontWeight="Bold" Foreground="{Binding SubTextForegroundBrush}" Margin="0,12,0,8"/>
+                                     <ComboBox SelectedValue="{Binding SelectedThemeName}" SelectedValuePath="Content" Style="{StaticResource ModernComboBox}" Height="30" Margin="0,0,0,8">
+                                        <ComboBoxItem Content="Deep OLED"/>
+                                        <ComboBoxItem Content="Cosmic Blue"/>
+                                        <ComboBoxItem Content="Emerald Aurora"/>
+                                        <ComboBoxItem Content="Sunset Amber"/>
+                                        <ComboBoxItem Content="Midnight Purple"/>
+                                        <ComboBoxItem Content="Forest Moss"/>
+                                        <ComboBoxItem Content="Cyberpunk Neon"/>
+                                        <ComboBoxItem Content="Ocean Depth"/>
+                                        <ComboBoxItem Content="Sakura Dusk"/>
+                                        <ComboBoxItem Content="Carbon Gray"/>
+                                        <ComboBoxItem Content="Frost White"/>
+                                        <ComboBoxItem Content="Custom Image"/>
+                                     </ComboBox>
+                                    <Button Command="{Binding ChooseCustomImageCommand}" Style="{StaticResource NeutralButton}" Content="Chọn ảnh nền..." Height="28" Padding="12,0" HorizontalAlignment="Left" Margin="0,0,0,10"/>
+                                    
+                                    <!-- Stretch Mode and Zoom Selection -->
+                                    <StackPanel Visibility="{Binding IsCustomBackgroundThemeSelected, Converter={StaticResource BoolToVisibilityConverter}}">
+                                        <TextBlock Text="CĂN CHỈNH HÌNH NỀN" FontSize="10" FontWeight="Bold" Foreground="{Binding SubTextForegroundBrush}" Margin="0,6,0,6"/>
+                                        <ComboBox SelectedValue="{Binding BackgroundStretchMode}" SelectedValuePath="Content" Style="{StaticResource ModernComboBox}" Height="30" Margin="0,0,0,8">
+                                            <ComboBoxItem Content="Cover"/>
+                                            <ComboBoxItem Content="Lấp đầy"/>
+                                            <ComboBoxItem Content="Center"/>
+                                            <ComboBoxItem Content="Stretch"/>
+                                            <ComboBoxItem Content="Tuỳ ý"/>
+                                        </ComboBox>
+                                        
+                                        <!-- Custom alignment sliders (Only visible when "Tuỳ ý" is selected) -->
+                                        <StackPanel Visibility="{Binding IsCustomZoomVisible, Converter={StaticResource BoolToVisibilityConverter}}" Margin="0,4,0,8">
+                                            <!-- Ngang (Horizontal offset) -->
+                                            <Grid Margin="0,0,0,4">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Text="Ngang" FontSize="11" Foreground="{Binding TextForegroundBrush}"/>
+                                                <TextBlock Grid.Column="1" Text="{Binding BackgroundNgang, StringFormat={}{0:F0}}" FontSize="11" Foreground="{Binding SelectedAccentBrush}" FontWeight="Bold"/>
+                                            </Grid>
+                                            <Slider Value="{Binding BackgroundNgang}" Minimum="0" Maximum="100" TickFrequency="1" IsSnapToTickEnabled="True" Margin="0,0,0,10"/>
+
+                                            <!-- Dọc (Vertical offset) -->
+                                            <Grid Margin="0,0,0,4">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Text="Dọc" FontSize="11" Foreground="{Binding TextForegroundBrush}"/>
+                                                <TextBlock Grid.Column="1" Text="{Binding BackgroundDoc, StringFormat={}{0:F0}}" FontSize="11" Foreground="{Binding SelectedAccentBrush}" FontWeight="Bold"/>
+                                            </Grid>
+                                            <Slider Value="{Binding BackgroundDoc}" Minimum="0" Maximum="100" TickFrequency="1" IsSnapToTickEnabled="True" Margin="0,0,0,10"/>
+
+                                            <!-- Phóng (Zoom) -->
+                                            <Grid Margin="0,0,0,4">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Text="Phóng" FontSize="11" Foreground="{Binding TextForegroundBrush}"/>
+                                                <TextBlock Grid.Column="1" Text="{Binding BackgroundPhong, StringFormat={}{0:F0}}" FontSize="11" Foreground="{Binding SelectedAccentBrush}" FontWeight="Bold"/>
+                                            </Grid>
+                                            <Slider Value="{Binding BackgroundPhong}" Minimum="50" Maximum="300" TickFrequency="5" IsSnapToTickEnabled="True" Margin="0,0,0,10"/>
+
+                                            <!-- Lật (Flip Horizontal) -->
+                                            <CheckBox IsChecked="{Binding BackgroundLat}" Margin="0,4,0,8" Foreground="{Binding TextForegroundBrush}">
+                                                <TextBlock Text="Lật (Xoay gương)" FontSize="11.5" Foreground="{Binding TextForegroundBrush}" Margin="4,-2,0,0"/>
+                                            </CheckBox>
+                                        </StackPanel>
+
+                                        <!-- Âm lượng video nền (Video Background Volume) -->
+                                        <StackPanel Margin="0,4,0,8">
+                                            <Grid Margin="0,0,0,4">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Text="Âm lượng video nền" FontSize="11" Foreground="{Binding TextForegroundBrush}"/>
+                                                <TextBlock Grid.Column="1" Text="{Binding BackgroundVideoVolume, StringFormat={}{0:F0}%}" FontSize="11" Foreground="{Binding SelectedAccentBrush}" FontWeight="Bold"/>
+                                            </Grid>
+                                            <Slider Value="{Binding BackgroundVideoVolume}" Minimum="0" Maximum="100" TickFrequency="5" IsSnapToTickEnabled="True" VerticalAlignment="Center"/>
+                                        </StackPanel>
+
+                                        <!-- COLOR CUSTOMIZATION HEADER AND TOGGLE -->
+                                        <Border BorderBrush="{Binding CardBorderBrush}" BorderThickness="0,1,0,0" Margin="0,10,0,10" Padding="0,10,0,0">
+                                            <CheckBox IsChecked="{Binding ShowColorCustom}" Margin="0,0,0,8" Foreground="{Binding TextForegroundBrush}">
+                                                <TextBlock Text="Hiển thị tuỳ chỉnh màu" FontSize="11.5" FontWeight="Bold" Foreground="{Binding TextForegroundBrush}" Margin="4,-2,0,0"/>
+                                            </CheckBox>
+                                        </Border>
+
+                                        <!-- Color Adjustment Sliders (Only visible when ShowColorCustom is enabled) -->
+                                        <StackPanel Visibility="{Binding ShowColorCustom, Converter={StaticResource BoolToVisibilityConverter}}" Margin="0,0,0,8">
+                                            <!-- Độ sáng (Brightness) -->
+                                            <Grid Margin="0,0,0,4">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Text="Độ sáng" FontSize="11" Foreground="{Binding TextForegroundBrush}"/>
+                                                <TextBlock Grid.Column="1" Text="{Binding BackgroundBrightness, StringFormat={}{0:F0}}" FontSize="11" Foreground="{Binding SelectedAccentBrush}" FontWeight="Bold"/>
+                                            </Grid>
+                                            <Slider Value="{Binding BackgroundBrightness}" Minimum="0" Maximum="100" TickFrequency="1" IsSnapToTickEnabled="True" Margin="0,0,0,10"/>
+
+                                            <!-- Tương phản (Contrast) -->
+                                            <Grid Margin="0,0,0,4">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Text="Tương phản" FontSize="11" Foreground="{Binding TextForegroundBrush}"/>
+                                                <TextBlock Grid.Column="1" Text="{Binding BackgroundContrast, StringFormat={}{0:F0}}" FontSize="11" Foreground="{Binding SelectedAccentBrush}" FontWeight="Bold"/>
+                                            </Grid>
+                                            <Slider Value="{Binding BackgroundContrast}" Minimum="0" Maximum="100" TickFrequency="1" IsSnapToTickEnabled="True" Margin="0,0,0,10"/>
+
+                                            <!-- Bão hoà (Saturation) -->
+                                            <Grid Margin="0,0,0,4">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Text="Bão hoà" FontSize="11" Foreground="{Binding TextForegroundBrush}"/>
+                                                <TextBlock Grid.Column="1" Text="{Binding BackgroundSaturation, StringFormat={}{0:F0}}" FontSize="11" Foreground="{Binding SelectedAccentBrush}" FontWeight="Bold"/>
+                                            </Grid>
+                                            <Slider Value="{Binding BackgroundSaturation}" Minimum="0" Maximum="100" TickFrequency="1" IsSnapToTickEnabled="True" Margin="0,0,0,10"/>
+
+                                            <!-- Hue shift -->
+                                            <Grid Margin="0,0,0,4">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Text="Hue shift" FontSize="11" Foreground="{Binding TextForegroundBrush}"/>
+                                                <TextBlock Grid.Column="1" Text="{Binding BackgroundHueShift, StringFormat={}{0:F0}}" FontSize="11" Foreground="{Binding SelectedAccentBrush}" FontWeight="Bold"/>
+                                            </Grid>
+                                            <Slider Value="{Binding BackgroundHueShift}" Minimum="0" Maximum="100" TickFrequency="1" IsSnapToTickEnabled="True" Margin="0,0,0,10"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- SECTION 4: STATISTICS -->
+                            <Border BorderBrush="{Binding CardBorderBrush}" BorderThickness="0,1,0,0" Padding="0,16,0,0">
+                                <StackPanel>
+                                    <TextBlock Text="THỐNG KÊ HIỆU SUẤT" FontSize="10" FontWeight="Bold" Foreground="{Binding SubTextForegroundBrush}" Margin="0,0,0,16"/>
+                                    
+                                    <!-- Counters -->
+                                    <Grid Margin="0,0,0,10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="Hoàn thành hôm nay:" Foreground="{Binding TextForegroundBrush}" FontSize="12"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding StatsCompletedToday}" Foreground="#E55B5B" FontWeight="Bold" FontSize="13"/>
+                                    </Grid>
+
+                                    <Grid Margin="0,0,0,10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="Hoàn thành tuần này:" Foreground="{Binding TextForegroundBrush}" FontSize="12"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding StatsCompletedThisWeek}" Foreground="#E55B5B" FontWeight="Bold" FontSize="13"/>
+                                    </Grid>
+
+                                    <Grid Margin="0,0,0,16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="Tỷ lệ xong Task:" Foreground="{Binding TextForegroundBrush}" FontSize="12"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding StatsTaskCompletionRate, StringFormat={}{0:F0}%}" Foreground="#81C784" FontWeight="Bold" FontSize="13"/>
+                                    </Grid>
+
+                                    <!-- Chart List -->
+                                    <TextBlock Text="Theo Thẻ (Phút tập trung)" FontSize="9" Foreground="{Binding SubTextForegroundBrush}" FontWeight="Bold" Margin="0,0,0,10"/>
+                                    <ItemsControl ItemsSource="{Binding StatsTagAllocation}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <StackPanel Margin="0,0,0,8">
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <TextBlock Text="{Binding TagName}" FontSize="11.5" Foreground="{Binding TextForegroundBrush, ElementName=RootWindow}"/>
+                                                        <TextBlock Grid.Column="1" Text="{Binding Minutes}" FontSize="11.5" Foreground="{Binding TextForegroundBrush, ElementName=RootWindow}" FontWeight="SemiBold"/>
+                                                    </Grid>
+                                                    <Border Background="#1E1E22" CornerRadius="1.5" Height="3" Margin="0,4,0,0">
+                                                        <ProgressBar Value="{Binding Minutes}" Minimum="0" Maximum="200" Foreground="{Binding Color}" Height="3" BorderThickness="0" Background="Transparent"/>
+                                                    </Border>
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+
+                    <!-- Save Action at the bottom of drawer -->
+                    <Button Grid.Row="2" Command="{Binding SaveSettingsCommand}" Style="{StaticResource AccentButton}" Content="Lưu cài đặt" Height="36" Width="140" HorizontalAlignment="Right" Margin="24,16,24,24"/>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- STRICT MODE WARNING OVERLAY -->
+        <Grid Grid.Row="1" Background="#F2050505" Visibility="{Binding IsStrictModeWarningVisible, Converter={StaticResource BoolToVisibilityConverter}}" Panel.ZIndex="20">
+            <Border BorderBrush="#E55B5B" BorderThickness="2" Margin="40" CornerRadius="12" Background="Transparent">
+                <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <TextBlock Text="🚨 CẢNH BÁO STRICT MODE!" FontSize="28" FontWeight="Bold" Foreground="#E55B5B" HorizontalAlignment="Center" Margin="0,0,0,12"/>
+                        <TextBlock Text="Bạn vừa rời khỏi ứng dụng tập trung!" FontSize="15" Foreground="{Binding TextForegroundBrush}" HorizontalAlignment="Center" Margin="0,0,0,24"/>
+                        
+                        <Grid HorizontalAlignment="Center">
+                            <Ellipse Stroke="#E55B5B" StrokeThickness="3" Width="80" Height="80"/>
+                            <TextBlock Text="{Binding StrictModeCountdown}" FontSize="32" FontWeight="Bold" Foreground="#E55B5B" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <TextBlock Text="Quay lại ứng dụng ngay lập tức hoặc phiên Pomodoro sẽ bị HỦY!" FontSize="13" Foreground="{Binding SubTextForegroundBrush}" HorizontalAlignment="Center" Margin="0,24,0,0"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- MULTI-LINE PASTE SPLIT PROMPT OVERLAY -->
+        <Grid Grid.Row="1" Background="#A6000000" Visibility="{Binding IsMultiLinePastePromptVisible, Converter={StaticResource BoolToVisibilityConverter}}" Panel.ZIndex="25" WindowChrome.IsHitTestVisibleInChrome="True">
+            <Border Background="{Binding CardBackgroundBrush}" BorderBrush="{Binding CardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="24" Width="400" Height="220" VerticalAlignment="Center" HorizontalAlignment="Center">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    
+                    <TextBlock Grid.Row="0" Text="Nhập danh sách nhiệm vụ" FontSize="16" FontWeight="Bold" Foreground="#E55B5B" Margin="0,0,0,12"/>
+                    <TextBlock Grid.Row="1" Text="Bạn vừa dán một danh sách nhiều dòng. Bạn có muốn tách danh sách này thành các nhiệm vụ riêng biệt không?" FontSize="13" Foreground="{Binding TextForegroundBrush}" TextWrapping="Wrap" LineHeight="18"/>
+                    
+                    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">
+                        <Button Command="{Binding AddMultiLinePasteAsSingleCommand}" Style="{StaticResource NeutralButton}" Content="Tạo 1 thẻ duy nhất" Height="32" Margin="0,0,8,0" Padding="12,0"/>
+                        <Button Command="{Binding SplitMultiLinePasteCommand}" Style="{StaticResource AccentButton}" Content="Tách dòng thành các thẻ" Height="32" Padding="12,0"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- IN-APP NOTIFICATION OVERLAY -->
+        <Grid Grid.Row="1" Background="#A6000000" Visibility="{Binding IsInAppNotificationVisible, Converter={StaticResource BoolToVisibilityConverter}}" Panel.ZIndex="30" WindowChrome.IsHitTestVisibleInChrome="True">
+            <Border Background="{Binding CardBackgroundBrush}" BorderBrush="{Binding CardBorderBrush}" BorderThickness="1" CornerRadius="12" Padding="24" Width="400" Height="220" VerticalAlignment="Center" HorizontalAlignment="Center">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    
+                    <TextBlock Grid.Row="0" Text="Thông báo hệ thống" FontSize="16" FontWeight="Bold" Foreground="#E55B5B" Margin="0,0,0,12"/>
+                    <TextBlock Grid.Row="1" Text="{Binding InAppNotificationMessage}" FontSize="13" Foreground="{Binding TextForegroundBrush}" TextWrapping="Wrap" LineHeight="18"/>
+                    <Button Grid.Row="2" Command="{Binding CloseNotificationCommand}" Style="{StaticResource AccentButton}" Content="Đồng ý" Width="100" Height="32" HorizontalAlignment="Right"/>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</Window>
