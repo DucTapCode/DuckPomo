@@ -18,6 +18,7 @@ namespace Pomodoro.ViewModels
         private readonly IAudioService _audioService;
         private readonly DispatcherTimer _timer;
         private readonly DispatcherTimer _strictModeTimer;
+        private readonly DiscordRpcService _discordRpcService;
 
         // State variables
         private List<TodoTask> _allTasks = new();
@@ -69,6 +70,8 @@ namespace Pomodoro.ViewModels
         {
             _dataService = new DataService();
             _audioService = new AudioService();
+            _discordRpcService = new DiscordRpcService();
+            _discordRpcService.Initialize();
             
             _settings = _dataService.GetSettings();
             if (_settings.BackgroundSaturation == 50 && !_settings.ShowColorCustom)
@@ -133,6 +136,7 @@ namespace Pomodoro.ViewModels
             {
                 ActiveFocusTask = _allTasks.First(t => !t.IsCompleted);
             }
+            UpdateDiscordPresence();
         }
 
         #region Properties
@@ -146,7 +150,13 @@ namespace Pomodoro.ViewModels
         public TodoTask? ActiveFocusTask
         {
             get => _activeFocusTask;
-            set => SetProperty(ref _activeFocusTask, value);
+            set
+            {
+                if (SetProperty(ref _activeFocusTask, value))
+                {
+                    UpdateDiscordPresence();
+                }
+            }
         }
 
         public AppSettings Settings
@@ -728,7 +738,7 @@ namespace Pomodoro.ViewModels
                     // Update ambient playback state if running in Focus Mode
                     if (IsRunning && TimerMode == "Focus")
                     {
-                        _audioService.StartAmbient(value, AmbientVolume);
+                        _ = _audioService.StartAmbientAsync(value, AmbientVolume);
                     }
                     else
                     {
@@ -1079,6 +1089,7 @@ namespace Pomodoro.ViewModels
         public void SaveSettingsOnClose()
         {
             _dataService.SaveSettings(_settings);
+            _discordRpcService.Deinitialize();
         }
 
         public void ApplyFilters()
@@ -1162,6 +1173,17 @@ namespace Pomodoro.ViewModels
             TimerText = $"{minutes:D2}:{seconds:D2}";
         }
 
+        private void UpdateDiscordPresence()
+        {
+            _discordRpcService.UpdatePresence(
+                _timerMode,
+                _activeFocusTask?.Title,
+                _isRunning,
+                _timeLeftSeconds,
+                _totalSessionDurationSeconds
+            );
+        }
+
         private void StartTimer()
         {
             if (IsRunning) return;
@@ -1172,12 +1194,14 @@ namespace Pomodoro.ViewModels
             // Ambient background sounds in Focus mode only
             if (TimerMode == "Focus")
             {
-                _audioService.StartAmbient(SelectedAmbientSound, AmbientVolume);
+                _ = _audioService.StartAmbientAsync(SelectedAmbientSound, AmbientVolume);
                 
                 // Reset warning states
                 IsStrictModeWarningVisible = false;
                 _strictModeCountdown = 5;
             }
+
+            UpdateDiscordPresence();
         }
 
         private void PauseTimer()
@@ -1189,6 +1213,8 @@ namespace Pomodoro.ViewModels
             _strictModeTimer.Stop();
             _audioService.StopAmbient();
             IsStrictModeWarningVisible = false;
+
+            UpdateDiscordPresence();
         }
 
         private void ResetTimer()
@@ -1196,6 +1222,7 @@ namespace Pomodoro.ViewModels
             // Reset/Cancel wipes session progress, does NOT record to history
             PauseTimer();
             ResetTimerValues();
+            UpdateDiscordPresence();
         }
 
         private void SwitchMode(string mode)
@@ -1203,6 +1230,7 @@ namespace Pomodoro.ViewModels
             PauseTimer();
             TimerMode = mode;
             ResetTimerValues();
+            UpdateDiscordPresence();
         }
 
         private void Timer_Tick(object? sender, EventArgs e)

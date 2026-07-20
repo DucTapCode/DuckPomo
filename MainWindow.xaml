@@ -1015,6 +1015,11 @@
                                         <ComboBoxItem Content="Digital"/>
                                         <ComboBoxItem Content="Kitchen"/>
                                         <ComboBoxItem Content="Wood"/>
+                                        <ComboBoxItem Content="Chime"/>
+                                        <ComboBoxItem Content="Sci-Fi"/>
+                                        <ComboBoxItem Content="Tibetan Bowl"/>
+                                        <ComboBoxItem Content="Marimba"/>
+                                        <ComboBoxItem Content="Gentle Chime"/>
                                     </ComboBox>
 
                                     <!-- Focus Sound (Ambient) selection -->
@@ -1024,7 +1029,15 @@
                                         <ComboBoxItem Content="Ticking Fast"/>
                                         <ComboBoxItem Content="Ticking Slow"/>
                                         <ComboBoxItem Content="White Noise"/>
+                                        <ComboBoxItem Content="Pink Noise"/>
                                         <ComboBoxItem Content="Brown Noise"/>
+                                        <ComboBoxItem Content="Rain"/>
+                                        <ComboBoxItem Content="Ocean Waves"/>
+                                        <ComboBoxItem Content="Cozy Fireplace"/>
+                                        <ComboBoxItem Content="Coffee Shop"/>
+                                        <ComboBoxItem Content="Binaural Alpha (Đeo tai nghe)"/>
+                                        <ComboBoxItem Content="Soft Wind"/>
+                                        <ComboBoxItem Content="Night Cricket"/>
                                     </ComboBox>
 
                                     <Grid>

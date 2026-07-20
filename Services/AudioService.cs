@@ -1,27 +1,30 @@
 using System;
+using System.Runtime.InteropServices;
 using System.Windows.Media;
 
 namespace Pomodoro.Services
 {
     public class AudioService : IAudioService
     {
-        private readonly MediaPlayer _ambientPlayer;
         private readonly MediaPlayer _alarmPlayer;
         private string _currentAmbientType = "None";
 
+        // Win32 PlaySound P/Invoke
+        [DllImport("winmm.dll", SetLastError = true, CharSet = CharSet.Auto)]
+        private static extern bool PlaySound(string? pszSound, IntPtr hmod, uint fdwSound);
+
+        [DllImport("winmm.dll")]
+        private static extern int waveOutSetVolume(IntPtr hwo, uint dwVolume);
+
+        private const uint SND_ASYNC = 0x0001;
+        private const uint SND_FILENAME = 0x00020000;
+        private const uint SND_LOOP = 0x0008;
+        private const uint SND_PURGE = 0x0040;
+        private const uint SND_NODEFAULT = 0x0002;
+
         public AudioService()
         {
-            _ambientPlayer = new MediaPlayer();
-            _ambientPlayer.MediaEnded += AmbientPlayer_MediaEnded;
-            
             _alarmPlayer = new MediaPlayer();
-        }
-
-        private void AmbientPlayer_MediaEnded(object? sender, EventArgs e)
-        {
-            // Loop ambient sound
-            _ambientPlayer.Position = TimeSpan.Zero;
-            _ambientPlayer.Play();
         }
 
         public void PlayAlarm(string alarmType)
@@ -40,7 +43,7 @@ namespace Pomodoro.Services
             }
         }
 
-        public void StartAmbient(string ambientType, double volume)
+        public async System.Threading.Tasks.Task StartAmbientAsync(string ambientType, double volume)
         {
             if (string.IsNullOrEmpty(ambientType) || ambientType == "None")
             {
@@ -50,12 +53,14 @@ namespace Pomodoro.Services
 
             try
             {
-                string path = AudioGenerator.GetSoundPath(ambientType);
+                string path = await System.Threading.Tasks.Task.Run(() => AudioGenerator.GetSoundPath(ambientType));
                 _currentAmbientType = ambientType;
                 
-                _ambientPlayer.Open(new Uri(path));
-                _ambientPlayer.Volume = volume;
-                _ambientPlayer.Play();
+                // Set volume first
+                SetAmbientVolume(volume);
+
+                // Play loopable sound using Win32 API (gapless)
+                PlaySound(path, IntPtr.Zero, SND_ASYNC | SND_FILENAME | SND_LOOP | SND_NODEFAULT);
             }
             catch (Exception ex)
             {
@@ -65,12 +70,15 @@ namespace Pomodoro.Services
 
         public void SetAmbientVolume(double volume)
         {
-            _ambientPlayer.Volume = Math.Clamp(volume, 0.0, 1.0);
+            // Set process-level volume for waveOut devices (Win32 API)
+            ushort volChan = (ushort)(Math.Clamp(volume, 0.0, 1.0) * 0xFFFF);
+            uint dwVolume = ((uint)volChan << 16) | volChan;
+            waveOutSetVolume(IntPtr.Zero, dwVolume);
         }
 
         public void StopAmbient()
         {
-            _ambientPlayer.Stop();
+            PlaySound(null, IntPtr.Zero, SND_PURGE);
             _currentAmbientType = "None";
         }
     }
