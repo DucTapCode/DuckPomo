@@ -17,7 +17,6 @@ namespace Pomodoro
     {
         private TodoTask? _hoveredTask;
         private SpotifyWindow? _spotifyWindow;
-        private WebWallpaperWindow? _webWallpaperWindow;
         private DispatcherTimer? _gifTimer;
         private List<BitmapSource> _gifFrames = new List<BitmapSource>();
         private int _currentGifFrameIndex = 0;
@@ -109,19 +108,9 @@ namespace Pomodoro
                     _spotifyWindow.Close();
                 }
 
-                if (_webWallpaperWindow != null)
-                {
-                    _webWallpaperWindow.Close();
-                }
-
                 viewModel.SaveSettingsOnClose();
             };
 
-            // Initialize Web Wallpaper background window
-            _webWallpaperWindow = new WebWallpaperWindow();
-            
-            this.LocationChanged += (s, e) => UpdateWebWallpaperPosition();
-            this.SizeChanged += (s, e) => UpdateWebWallpaperPosition();
             this.StateChanged += (s, e) =>
             {
                 if (this.WindowState == WindowState.Maximized)
@@ -133,28 +122,10 @@ namespace Pomodoro
                 {
                     RootWindowGrid.Margin = new Thickness(0);
                 }
-
-                if (_webWallpaperWindow != null)
-                {
-                    if (this.WindowState == WindowState.Minimized)
-                    {
-                        _webWallpaperWindow.WindowState = WindowState.Minimized;
-                    }
-                    else if (this.WindowState == WindowState.Maximized)
-                    {
-                        _webWallpaperWindow.WindowState = WindowState.Maximized;
-                    }
-                    else
-                    {
-                        _webWallpaperWindow.WindowState = WindowState.Normal;
-                        UpdateWebWallpaperPosition();
-                    }
-                }
             };
             this.Activated += (s, e) => 
             {
                 viewModel.OnAppActivated();
-                KeepWallpaperBehind();
             };
             this.Deactivated += (s, e) => viewModel.OnAppDeactivated();
 
@@ -418,73 +389,52 @@ namespace Pomodoro
 
                     // Set solid dark background on the player grid to prevent transparent GIF pixels bleeding the desktop/IDE through
                     BackgroundPlayerGrid.Background = new SolidColorBrush(Color.FromRgb(18, 18, 22));
+                    vm.MainWindowBackgroundBrush = vm.SelectedBackgroundBrush;
 
-                    if (ext == ".html" || ext == ".htm")
+                    bool isVideo = ext == ".mp4" || ext == ".wmv" || ext == ".avi" || ext == ".mov" || ext == ".mkv";
+
+                    if (isVideo)
                     {
-                        BackgroundVideoPlayer.Stop();
-                        BackgroundVideoPlayer.Visibility = Visibility.Collapsed;
+                        StopGifAnimation();
                         BackgroundImagePlayer.Visibility = Visibility.Collapsed;
-
-                        vm.MainWindowBackgroundBrush = System.Windows.Media.Brushes.Transparent;
-                        if (_webWallpaperWindow != null)
+                        BackgroundVideoPlayer.Visibility = Visibility.Visible;
+                        
+                        try
                         {
-                            _webWallpaperWindow.NavigateToHtml(mediaPath);
-                            UpdateWebWallpaperPosition();
+                            BackgroundVideoPlayer.Source = new Uri(mediaPath);
+                            BackgroundVideoPlayer.Play();
+                        }
+                        catch (Exception ex)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"Failed to play background video: {ex.Message}");
                         }
                     }
                     else
                     {
-                        if (_webWallpaperWindow != null)
-                        {
-                            _webWallpaperWindow.ClearWallpaper();
-                        }
-                        vm.MainWindowBackgroundBrush = vm.SelectedBackgroundBrush;
+                        BackgroundVideoPlayer.Stop();
+                        BackgroundVideoPlayer.Visibility = Visibility.Collapsed;
+                        BackgroundImagePlayer.Visibility = Visibility.Visible;
 
-                        bool isVideo = ext == ".mp4" || ext == ".wmv" || ext == ".avi" || ext == ".mov" || ext == ".mkv";
-
-                        if (isVideo)
+                        if (ext == ".gif")
                         {
-                            StopGifAnimation();
-                            BackgroundImagePlayer.Visibility = Visibility.Collapsed;
-                            BackgroundVideoPlayer.Visibility = Visibility.Visible;
-                            
-                            try
-                            {
-                                BackgroundVideoPlayer.Source = new Uri(mediaPath);
-                                BackgroundVideoPlayer.Play();
-                            }
-                            catch (Exception ex)
-                            {
-                                System.Diagnostics.Debug.WriteLine($"Failed to play background video: {ex.Message}");
-                            }
+                            PlayGifNative(mediaPath);
                         }
                         else
                         {
-                            BackgroundVideoPlayer.Stop();
-                            BackgroundVideoPlayer.Visibility = Visibility.Collapsed;
-                            BackgroundImagePlayer.Visibility = Visibility.Visible;
-
-                            if (ext == ".gif")
+                            StopGifAnimation();
+                            try
                             {
-                                PlayGifNative(mediaPath);
+                                var bitmap = new System.Windows.Media.Imaging.BitmapImage();
+                                bitmap.BeginInit();
+                                bitmap.UriSource = new Uri(mediaPath);
+                                bitmap.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
+                                bitmap.EndInit();
+                                BackgroundImagePlayer.Source = bitmap;
                             }
-                            else
+                            catch (Exception ex)
                             {
-                                StopGifAnimation();
-                                try
-                                {
-                                    var bitmap = new System.Windows.Media.Imaging.BitmapImage();
-                                    bitmap.BeginInit();
-                                    bitmap.UriSource = new Uri(mediaPath);
-                                    bitmap.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
-                                    bitmap.EndInit();
-                                    BackgroundImagePlayer.Source = bitmap;
-                                }
-                                catch (Exception ex)
-                                {
-                                    System.Diagnostics.Debug.WriteLine($"Failed to load background image: {ex.Message}");
-                                    BackgroundImagePlayer.Visibility = Visibility.Collapsed;
-                                }
+                                System.Diagnostics.Debug.WriteLine($"Failed to load background image: {ex.Message}");
+                                BackgroundImagePlayer.Visibility = Visibility.Collapsed;
                             }
                         }
                     }
@@ -492,10 +442,6 @@ namespace Pomodoro
                 else
                 {
                     BackgroundPlayerGrid.Background = System.Windows.Media.Brushes.Transparent;
-                    if (_webWallpaperWindow != null)
-                    {
-                        _webWallpaperWindow.ClearWallpaper();
-                    }
                     vm.MainWindowBackgroundBrush = vm.SelectedBackgroundBrush;
                     BackgroundVideoPlayer.Stop();
                     StopGifAnimation();
@@ -620,29 +566,7 @@ namespace Pomodoro
             return 100; // default 100ms
         }
 
-        private void UpdateWebWallpaperPosition()
-        {
-            if (_webWallpaperWindow != null)
-            {
-                _webWallpaperWindow.Left = this.Left;
-                _webWallpaperWindow.Top = this.Top;
-                _webWallpaperWindow.Width = this.Width;
-                _webWallpaperWindow.Height = this.Height;
-                KeepWallpaperBehind();
-            }
-        }
 
-        private void KeepWallpaperBehind()
-        {
-            if (_webWallpaperWindow == null) return;
-            try
-            {
-                var wwh = new WindowInteropHelper(_webWallpaperWindow).Handle;
-                var mwh = new WindowInteropHelper(this).Handle;
-                SetWindowPos(wwh, mwh, 0, 0, 0, 0, 0x0002 | 0x0001 | 0x0010); // SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE
-            }
-            catch { }
-        }
 
         private Color GetAverageColorFromBitmap(BitmapSource bitmap)
         {
