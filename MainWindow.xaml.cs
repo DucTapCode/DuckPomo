@@ -755,5 +755,10 @@ namespace Pomodoro
                 }
             }
         }
+
+        private void Drawer_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+            e.Handled = true;
+        }
     }
 }

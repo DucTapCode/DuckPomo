@@ -84,3 +84,6 @@ StyleCopReport.xml
 
 # RePKG outputs
 wpe_cache/
+
+# Release secrets
+.release_credentials.json

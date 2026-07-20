@@ -109,7 +109,13 @@ namespace Pomodoro.ViewModels
             
             SwitchModeCommand = new RelayCommand<string>(SwitchMode);
             SaveSettingsCommand = new RelayCommand(SaveSettings);
-            ToggleSettingsCommand = new RelayCommand(() => IsSettingsVisible = !IsSettingsVisible);
+            ToggleSettingsCommand = new RelayCommand<object>(param =>
+            {
+                if (param?.ToString() != "SuppressClose")
+                {
+                    IsSettingsVisible = !IsSettingsVisible;
+                }
+            });
             CloseNotificationCommand = new RelayCommand(() => IsInAppNotificationVisible = false);
             ToggleSpotifyPlayerCommand = new RelayCommand(() => IsSpotifyPlayerVisible = !IsSpotifyPlayerVisible);
             NavigateToSpotifyLoginCommand = new RelayCommand(() => SpotifyCurrentUrl = "https://open.spotify.com/");
