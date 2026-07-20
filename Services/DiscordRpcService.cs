@@ -6,7 +6,7 @@ namespace Pomodoro.Services
     public class DiscordRpcService
     {
         private DiscordRpcClient? _client;
-        private const string ClientId = "1391798890558132364";
+        private const string ClientId = "1528781432271409287";
 
         public void Initialize()
         {
