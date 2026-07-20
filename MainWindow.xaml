@@ -286,7 +286,7 @@
         <!-- Accent Primary Button Style -->
         <Style x:Key="AccentButton" TargetType="Button">
             <Setter Property="FontFamily" Value="{StaticResource MainFont}"/>
-            <Setter Property="Background" Value="#E55B5B"/>
+            <Setter Property="Background" Value="{Binding SelectedAccentBrush}"/>
             <Setter Property="Foreground" Value="#FFFFFF"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Padding" Value="16,8"/>
@@ -303,10 +303,10 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="#EF7171"/>
+                                <Setter Property="Opacity" Value="0.9"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter Property="Background" Value="#C94444"/>
+                                <Setter Property="Opacity" Value="0.8"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -334,10 +334,10 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="#27272A"/>
+                                <Setter Property="Opacity" Value="0.85"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter Property="Background" Value="#09090B"/>
+                                <Setter Property="Opacity" Value="0.75"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -383,7 +383,7 @@
         </Style>
     </Window.Resources>
 
-    <Grid Background="{Binding MainWindowBackgroundBrush}">
+    <Grid x:Name="RootWindowGrid" Background="{Binding MainWindowBackgroundBrush}">
         <Grid.RowDefinitions>
             <!-- Custom Title bar (Height: 40) -->
             <RowDefinition Height="40"/>
@@ -391,8 +391,7 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <!-- BACKGROUND MEDIA / IMAGE PLAYER -->
-        <Grid Grid.RowSpan="2" Panel.ZIndex="-1" IsHitTestVisible="False">
+        <Grid x:Name="BackgroundPlayerGrid" Grid.RowSpan="2" Panel.ZIndex="-1" IsHitTestVisible="False">
             <!-- MediaElement for Videos and GIFs -->
             <MediaElement x:Name="BackgroundVideoPlayer"
                           Stretch="{Binding BackgroundStretch}"

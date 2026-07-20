@@ -7,6 +7,7 @@ using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
+using System.Windows.Threading;
 using Pomodoro.Models;
 using Pomodoro.ViewModels;
 
@@ -17,6 +18,12 @@ namespace Pomodoro
         private TodoTask? _hoveredTask;
         private SpotifyWindow? _spotifyWindow;
         private WebWallpaperWindow? _webWallpaperWindow;
+        private DispatcherTimer? _gifTimer;
+        private List<BitmapSource> _gifFrames = new List<BitmapSource>();
+        private int _currentGifFrameIndex = 0;
+        private RenderTargetBitmap? _gifAccumulator;
+        private int _gifWidth;
+        private int _gifHeight;
 
         public MainWindow()
         {
@@ -117,6 +124,16 @@ namespace Pomodoro
             this.SizeChanged += (s, e) => UpdateWebWallpaperPosition();
             this.StateChanged += (s, e) =>
             {
+                if (this.WindowState == WindowState.Maximized)
+                {
+                    // Adjust margin to prevent the 8px overflow black border/flicker when maximized
+                    RootWindowGrid.Margin = new Thickness(8);
+                }
+                else
+                {
+                    RootWindowGrid.Margin = new Thickness(0);
+                }
+
                 if (_webWallpaperWindow != null)
                 {
                     if (this.WindowState == WindowState.Minimized)
@@ -399,6 +416,9 @@ namespace Pomodoro
                     Color avgColor = GetBackgroundAverageColor(mediaPath);
                     UpdateThemeColorsForBackground(vm, avgColor);
 
+                    // Set solid dark background on the player grid to prevent transparent GIF pixels bleeding the desktop/IDE through
+                    BackgroundPlayerGrid.Background = new SolidColorBrush(Color.FromRgb(18, 18, 22));
+
                     if (ext == ".html" || ext == ".htm")
                     {
                         BackgroundVideoPlayer.Stop();
@@ -420,10 +440,11 @@ namespace Pomodoro
                         }
                         vm.MainWindowBackgroundBrush = vm.SelectedBackgroundBrush;
 
-                        bool isVideoOrGif = ext == ".mp4" || ext == ".wmv" || ext == ".avi" || ext == ".mov" || ext == ".mkv" || ext == ".gif";
+                        bool isVideo = ext == ".mp4" || ext == ".wmv" || ext == ".avi" || ext == ".mov" || ext == ".mkv";
 
-                        if (isVideoOrGif)
+                        if (isVideo)
                         {
+                            StopGifAnimation();
                             BackgroundImagePlayer.Visibility = Visibility.Collapsed;
                             BackgroundVideoPlayer.Visibility = Visibility.Visible;
                             
@@ -434,7 +455,7 @@ namespace Pomodoro
                             }
                             catch (Exception ex)
                             {
-                                System.Diagnostics.Debug.WriteLine($"Failed to play background video/GIF: {ex.Message}");
+                                System.Diagnostics.Debug.WriteLine($"Failed to play background video: {ex.Message}");
                             }
                         }
                         else
@@ -443,35 +464,160 @@ namespace Pomodoro
                             BackgroundVideoPlayer.Visibility = Visibility.Collapsed;
                             BackgroundImagePlayer.Visibility = Visibility.Visible;
 
-                            try
+                            if (ext == ".gif")
                             {
-                                var bitmap = new System.Windows.Media.Imaging.BitmapImage();
-                                bitmap.BeginInit();
-                                bitmap.UriSource = new Uri(mediaPath);
-                                bitmap.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
-                                bitmap.EndInit();
-                                BackgroundImagePlayer.Source = bitmap;
+                                PlayGifNative(mediaPath);
                             }
-                            catch (Exception ex)
+                            else
                             {
-                                System.Diagnostics.Debug.WriteLine($"Failed to load background image: {ex.Message}");
-                                BackgroundImagePlayer.Visibility = Visibility.Collapsed;
+                                StopGifAnimation();
+                                try
+                                {
+                                    var bitmap = new System.Windows.Media.Imaging.BitmapImage();
+                                    bitmap.BeginInit();
+                                    bitmap.UriSource = new Uri(mediaPath);
+                                    bitmap.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
+                                    bitmap.EndInit();
+                                    BackgroundImagePlayer.Source = bitmap;
+                                }
+                                catch (Exception ex)
+                                {
+                                    System.Diagnostics.Debug.WriteLine($"Failed to load background image: {ex.Message}");
+                                    BackgroundImagePlayer.Visibility = Visibility.Collapsed;
+                                }
                             }
                         }
                     }
                 }
                 else
                 {
+                    BackgroundPlayerGrid.Background = System.Windows.Media.Brushes.Transparent;
                     if (_webWallpaperWindow != null)
                     {
                         _webWallpaperWindow.ClearWallpaper();
                     }
                     vm.MainWindowBackgroundBrush = vm.SelectedBackgroundBrush;
                     BackgroundVideoPlayer.Stop();
+                    StopGifAnimation();
                     BackgroundVideoPlayer.Visibility = Visibility.Collapsed;
                     BackgroundImagePlayer.Visibility = Visibility.Collapsed;
                 }
             }
+        }
+
+        private void PlayGifNative(string gifPath)
+        {
+            try
+            {
+                StopGifAnimation();
+
+                var uri = new Uri(gifPath);
+                var decoder = new GifBitmapDecoder(uri, BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.OnLoad);
+                
+                _gifFrames.Clear();
+                foreach (var frame in decoder.Frames)
+                {
+                    _gifFrames.Add(frame);
+                }
+
+                if (_gifFrames.Count == 0) return;
+
+                var firstFrame = _gifFrames[0];
+                _gifWidth = firstFrame.PixelWidth;
+                _gifHeight = firstFrame.PixelHeight;
+                
+                // Create drawing canvas accumulator
+                _gifAccumulator = new RenderTargetBitmap(_gifWidth, _gifHeight, 96, 96, PixelFormats.Pbgra32);
+                
+                RenderGifFrame(0);
+                _currentGifFrameIndex = 0;
+
+                if (_gifFrames.Count > 1)
+                {
+                    int delayMs = GetGifFrameDelay(decoder.Frames[0]);
+                    _gifTimer = new DispatcherTimer(DispatcherPriority.Render);
+                    _gifTimer.Interval = TimeSpan.FromMilliseconds(delayMs);
+                    _gifTimer.Tick += (s, e) =>
+                    {
+                        if (_gifFrames.Count == 0 || _gifAccumulator == null) return;
+                        _currentGifFrameIndex = (_currentGifFrameIndex + 1) % _gifFrames.Count;
+                        
+                        RenderGifFrame(_currentGifFrameIndex);
+                        
+                        // Dynamically adjust interval for variable framerate GIFs
+                        int nextDelay = GetGifFrameDelay(decoder.Frames[_currentGifFrameIndex]);
+                        if (_gifTimer.Interval.TotalMilliseconds != nextDelay)
+                        {
+                            _gifTimer.Interval = TimeSpan.FromMilliseconds(nextDelay);
+                        }
+                    };
+                    _gifTimer.Start();
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Failed to load animated GIF natively: {ex.Message}");
+            }
+        }
+
+        private void RenderGifFrame(int index)
+        {
+            if (_gifAccumulator == null || _gifFrames.Count <= index) return;
+            
+            var frame = _gifFrames[index];
+            var drawingVisual = new DrawingVisual();
+            using (var dc = drawingVisual.RenderOpen())
+            {
+                if (index > 0)
+                {
+                    // Draw accumulated previous frames (to respect GIF transparency/combine disposal)
+                    dc.DrawImage(_gifAccumulator, new Rect(0, 0, _gifWidth, _gifHeight));
+                }
+                else
+                {
+                    // Clean canvas for first frame
+                    dc.DrawRectangle(new SolidColorBrush(Color.FromRgb(18, 18, 22)), null, new Rect(0, 0, _gifWidth, _gifHeight));
+                }
+                
+                // Draw current frame on top
+                dc.DrawImage(frame, new Rect(0, 0, _gifWidth, _gifHeight));
+            }
+            _gifAccumulator.Render(drawingVisual);
+            BackgroundImagePlayer.Source = _gifAccumulator;
+        }
+
+        private void StopGifAnimation()
+        {
+            if (_gifTimer != null)
+            {
+                _gifTimer.Stop();
+                _gifTimer = null;
+            }
+            _gifFrames.Clear();
+            _gifAccumulator = null;
+            _currentGifFrameIndex = 0;
+        }
+
+        private int GetGifFrameDelay(BitmapFrame frame)
+        {
+            try
+            {
+                var metadata = frame.Metadata as BitmapMetadata;
+                if (metadata != null && metadata.ContainsQuery("/grctle/Delay"))
+                {
+                    object delay = metadata.GetQuery("/grctle/Delay");
+                    if (delay != null)
+                    {
+                        int delayInt = Convert.ToInt32(delay); // in centiseconds (10ms)
+                        if (delayInt > 0)
+                        {
+                            return delayInt * 10; // convert to milliseconds
+                        }
+                    }
+                }
+            }
+            catch { }
+            return 100; // default 100ms
         }
 
         private void UpdateWebWallpaperPosition()

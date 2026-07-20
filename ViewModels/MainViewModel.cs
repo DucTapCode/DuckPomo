@@ -339,9 +339,11 @@ namespace Pomodoro.ViewModels
                     _dataService.SaveSettings(_settings);
                     OnPropertyChanged(nameof(BackgroundStretchMode));
                     OnPropertyChanged(nameof(BackgroundStretch));
+                    OnPropertyChanged(nameof(IsCustomZoomVisible));
                     OnPropertyChanged(nameof(BackgroundZoomX));
                     OnPropertyChanged(nameof(BackgroundZoomY));
-                    OnPropertyChanged(nameof(IsCustomZoomVisible));
+                    OnPropertyChanged(nameof(BackgroundOffsetX));
+                    OnPropertyChanged(nameof(BackgroundOffsetY));
                 }
             }
         }
@@ -371,7 +373,7 @@ namespace Pomodoro.ViewModels
                     "Lấp đầy" => Stretch.Fill,
                     "Center" => Stretch.None,
                     "Stretch" => Stretch.Uniform,
-                    "Tuỳ ý" => Stretch.Uniform, // Use Uniform as base stretch so the user can scale and position from the full image size
+                    "Tuỳ ý" => Stretch.UniformToFill, // Revert to UniformToFill as base
                     _ => Stretch.UniformToFill
                 };
             }
@@ -389,12 +391,12 @@ namespace Pomodoro.ViewModels
 
         public double BackgroundOffsetX
         {
-            get => _settings.BackgroundStretchMode == "Tuỳ ý" ? (_settings.BackgroundNgang - 50) * 8 : 0;
+            get => _settings.BackgroundStretchMode == "Tuỳ ý" ? (_settings.BackgroundNgang - 50) * 16 : 0; // Keeping the improved 16x multiplier
         }
 
         public double BackgroundOffsetY
         {
-            get => _settings.BackgroundStretchMode == "Tuỳ ý" ? (_settings.BackgroundDoc - 50) * 8 : 0;
+            get => _settings.BackgroundStretchMode == "Tuỳ ý" ? (_settings.BackgroundDoc - 50) * 16 : 0; // Keeping the improved 16x multiplier
         }
 
         public bool IsCustomZoomVisible
