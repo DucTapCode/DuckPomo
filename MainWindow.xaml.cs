@@ -560,8 +560,8 @@ namespace Pomodoro
             
             if (!isImageOrGif)
             {
-                // For videos, use a modern high-quality cyber-accent color (glowing sky blue)
-                return Color.FromRgb(56, 189, 248); // sky-300
+                // For videos, default to dark theme for maximum readability
+                return Color.FromRgb(15, 15, 20);
             }
 
             try
@@ -632,12 +632,13 @@ namespace Pomodoro
 
         private void UpdateThemeColorsForBackground(MainViewModel vm, Color avgColor)
         {
-            // Convert to HSL to fine-tune
+            // Calculate relative luminance: Y = 0.2126 * R + 0.7152 * G + 0.0722 * B
+            double relativeLuminance = (0.2126 * avgColor.R + 0.7152 * avgColor.G + 0.0722 * avgColor.B) / 255.0;
+            
+            // Convert to HSL to fine-tune accent color
             ColorToHsl(avgColor, out double h, out double s, out double l);
-
-            // Safety threshold: Only classify as light theme if background is very light (L >= 0.75)
-            // Purple, medium blue, or standard vibrant colors will correctly fall into Dark theme
-            bool isDarkBackground = l < 0.75;
+            
+            bool isDarkBackground = relativeLuminance < 0.45;
             Color accentColor;
 
             if (isDarkBackground)
@@ -645,24 +646,32 @@ namespace Pomodoro
                 // For dark backgrounds, we want a vibrant, highly-saturated neon accent
                 accentColor = ColorFromHsl(h, 0.85, 0.65);
                 
-                // Adaptive dark theme brushes (glassmorphism style with ~15% opacity card backgrounds)
-                vm.CardBackgroundBrush = new SolidColorBrush(Color.FromArgb(40, 15, 15, 20));
+                // Blend avgColor (20%) with base dark grey (80%) for an integrated glass tint
+                byte cardR = (byte)(0.2 * avgColor.R + 0.8 * 18);
+                byte cardG = (byte)(0.2 * avgColor.G + 0.8 * 18);
+                byte cardB = (byte)(0.2 * avgColor.B + 0.8 * 22);
+                
+                vm.CardBackgroundBrush = new SolidColorBrush(Color.FromArgb(40, cardR, cardG, cardB));
                 vm.CardBorderBrush = new SolidColorBrush(Color.FromArgb(20, 255, 255, 255));
                 vm.TextForegroundBrush = new SolidColorBrush(Color.FromRgb(244, 244, 245));
                 vm.SubTextForegroundBrush = new SolidColorBrush(Color.FromRgb(161, 161, 170));
-                vm.TextBoxBackgroundBrush = new SolidColorBrush(Color.FromArgb(60, 10, 10, 12));
+                vm.TextBoxBackgroundBrush = new SolidColorBrush(Color.FromArgb(60, cardR, cardG, cardB));
             }
             else
             {
                 // For light backgrounds, we want a dark, high-contrast readable accent
                 accentColor = ColorFromHsl(h, 0.80, 0.35);
                 
-                // Adaptive light theme brushes (glassmorphism style with ~15% opacity white backgrounds)
-                vm.CardBackgroundBrush = new SolidColorBrush(Color.FromArgb(40, 255, 255, 255));
+                // Blend avgColor (20%) with white (80%) for an integrated light glass tint
+                byte cardR = (byte)(0.2 * avgColor.R + 0.8 * 255);
+                byte cardG = (byte)(0.2 * avgColor.G + 0.8 * 255);
+                byte cardB = (byte)(0.2 * avgColor.B + 0.8 * 255);
+                
+                vm.CardBackgroundBrush = new SolidColorBrush(Color.FromArgb(40, cardR, cardG, cardB));
                 vm.CardBorderBrush = new SolidColorBrush(Color.FromArgb(25, 0, 0, 0));
                 vm.TextForegroundBrush = new SolidColorBrush(Color.FromRgb(24, 24, 27));
                 vm.SubTextForegroundBrush = new SolidColorBrush(Color.FromRgb(113, 113, 122));
-                vm.TextBoxBackgroundBrush = new SolidColorBrush(Color.FromArgb(60, 244, 244, 245));
+                vm.TextBoxBackgroundBrush = new SolidColorBrush(Color.FromArgb(60, cardR, cardG, cardB));
             }
 
             vm.SelectedAccentBrush = new SolidColorBrush(accentColor);
