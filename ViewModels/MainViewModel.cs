@@ -371,7 +371,7 @@ namespace Pomodoro.ViewModels
                     "Lấp đầy" => Stretch.Fill,
                     "Center" => Stretch.None,
                     "Stretch" => Stretch.Uniform,
-                    "Tuỳ ý" => Stretch.UniformToFill, // Use UniformToFill as base stretch so that custom zooms and translates are consistent across all image resolutions
+                    "Tuỳ ý" => Stretch.Uniform, // Use Uniform as base stretch so the user can scale and position from the full image size
                     _ => Stretch.UniformToFill
                 };
             }
