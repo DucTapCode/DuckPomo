@@ -113,15 +113,9 @@ namespace Pomodoro
 
             this.StateChanged += (s, e) =>
             {
-                if (this.WindowState == WindowState.Maximized)
-                {
-                    // Adjust margin to prevent the 8px overflow black border/flicker when maximized
-                    RootWindowGrid.Margin = new Thickness(8);
-                }
-                else
-                {
-                    RootWindowGrid.Margin = new Thickness(0);
-                }
+                // Reset margin to 0 since WmGetMinMaxInfo handles the exact work area bounds perfectly
+                RootWindowGrid.Margin = new Thickness(0);
+                this.UpdateLayout();
             };
             this.Activated += (s, e) => 
             {
@@ -349,12 +343,11 @@ namespace Pomodoro
                 GetMonitorInfo(monitor, ref monitorInfo);
 
                 RECT rcWorkArea = monitorInfo.rcWork;
-                RECT rcMonitorArea = monitorInfo.rcMonitor;
 
-                mmi.ptMaxPosition.X = Math.Abs(rcWorkArea.Left - rcMonitorArea.Left);
-                mmi.ptMaxPosition.Y = Math.Abs(rcWorkArea.Top - rcMonitorArea.Top);
-                mmi.ptMaxSize.X = Math.Abs(rcWorkArea.Right - rcWorkArea.Left);
-                mmi.ptMaxSize.Y = Math.Abs(rcWorkArea.Bottom - rcWorkArea.Top);
+                mmi.ptMaxPosition.X = rcWorkArea.Left;
+                mmi.ptMaxPosition.Y = rcWorkArea.Top;
+                mmi.ptMaxSize.X = rcWorkArea.Right - rcWorkArea.Left;
+                mmi.ptMaxSize.Y = rcWorkArea.Bottom - rcWorkArea.Top;
             }
 
             Marshal.StructureToPtr(mmi, lParam, true);
