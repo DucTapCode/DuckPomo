@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "Duck Pomodoro"
-#define MyAppVersion "1.9.0"
+#define MyAppVersion "1.9.1"
 #define MyAppPublisher "Duck Dev"
 #define MyAppExeName "Pomodoro.exe"
 

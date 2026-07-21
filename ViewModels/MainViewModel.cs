@@ -194,7 +194,33 @@ namespace Pomodoro.ViewModels
         public string TimerMode
         {
             get => _timerMode;
-            set => SetProperty(ref _timerMode, value);
+            set
+            {
+                if (SetProperty(ref _timerMode, value))
+                {
+                    OnPropertyChanged(nameof(IsFocusMode));
+                    OnPropertyChanged(nameof(IsShortBreakMode));
+                    OnPropertyChanged(nameof(IsLongBreakMode));
+                }
+            }
+        }
+
+        public bool IsFocusMode
+        {
+            get => TimerMode == "Focus";
+            set { if (value) SwitchMode("Focus"); }
+        }
+
+        public bool IsShortBreakMode
+        {
+            get => TimerMode == "Short Break";
+            set { if (value) SwitchMode("Short Break"); }
+        }
+
+        public bool IsLongBreakMode
+        {
+            get => TimerMode == "Long Break";
+            set { if (value) SwitchMode("Long Break"); }
         }
 
         public bool IsSettingsVisible

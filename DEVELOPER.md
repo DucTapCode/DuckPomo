@@ -69,4 +69,28 @@ Khi cần biên dịch và xuất bản phiên bản mới:
         ```powershell
         $env:Path += ";C:\Users\ductr\AppData\Local\Programs\Inno Setup 6"; iscc installer.iss
         ```
-    *   Đẩy code lên Git và tạo Tag/Release mới trên GitHub tương ứng với số hiệu phiên bản.
+    *   Đẩy code lên Git, gắn Tag phiên bản mới và tự động tạo Release đính kèm file cài đặt `.exe` lên GitHub từ tệp credentials [.release_credentials.json](file:///d:/Duc/Code/Projects/Pomodoro/.release_credentials.json):
+        ```powershell
+        # Đọc thông tin cấu hình credentials
+        $creds = Get-Content .release_credentials.json | ConvertFrom-Json
+        $token = $creds.github_token
+        $repo = $creds.repository
+        $version = "v1.9.1" # Đổi theo số phiên bản trong installer.iss
+
+        # Commit & Push Tag lên GitHub
+        git add .
+        git commit -m "Release $version"
+        git tag $version
+        git push origin main --tags
+
+        # Tạo Release & Upload file DuckPomodoro_Setup.exe bằng GitHub API
+        $headers = @{ "Authorization" = "token $token"; "Accept" = "application/vnd.github.v3+json" }
+        $releaseBody = @{ tag_name = $version; name = "Release $version"; body = "Cập nhật phiên bản mới $version"; draft = $false; prerelease = $false } | ConvertTo-Json
+        $release = Invoke-RestMethod -Uri "https://api.github.com/repos/$repo/releases" -Method Post -Headers $headers -Body $releaseBody -ContentType "application/json"
+
+        # Upload file installer
+        $uploadUrl = $release.upload_url.Replace("{?name,label}", "?name=DuckPomodoro_Setup.exe")
+        $filePath = "d:\Duc\Code\Projects\Pomodoro\bin\Release\DuckPomodoro_Setup.exe"
+        $fileBytes = [System.IO.File]::ReadAllBytes($filePath)
+        Invoke-RestMethod -Uri $uploadUrl -Method Post -Headers @{ "Authorization" = "token $token"; "Content-Type" = "application/octet-stream" } -Body $fileBytes
+        ```

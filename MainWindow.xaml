@@ -932,9 +932,9 @@
 
                             <!-- Top: Switch buttons -->
                             <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,16" WindowChrome.IsHitTestVisibleInChrome="True">
-                                <RadioButton Content="Tập trung" IsChecked="True" Command="{Binding SwitchModeCommand}" CommandParameter="Focus" Style="{StaticResource RadioButtonMode}"/>
-                                <RadioButton Content="Nghỉ ngắn" Command="{Binding SwitchModeCommand}" CommandParameter="Short Break" Style="{StaticResource RadioButtonMode}"/>
-                                <RadioButton Content="Nghỉ dài" Command="{Binding SwitchModeCommand}" CommandParameter="Long Break" Style="{StaticResource RadioButtonMode}"/>
+                                <RadioButton Content="Tập trung" IsChecked="{Binding IsFocusMode, Mode=TwoWay}" Command="{Binding SwitchModeCommand}" CommandParameter="Focus" Style="{StaticResource RadioButtonMode}"/>
+                                <RadioButton Content="Nghỉ ngắn" IsChecked="{Binding IsShortBreakMode, Mode=TwoWay}" Command="{Binding SwitchModeCommand}" CommandParameter="Short Break" Style="{StaticResource RadioButtonMode}"/>
+                                <RadioButton Content="Nghỉ dài" IsChecked="{Binding IsLongBreakMode, Mode=TwoWay}" Command="{Binding SwitchModeCommand}" CommandParameter="Long Break" Style="{StaticResource RadioButtonMode}"/>
                             </StackPanel>
 
                             <!-- Middle: Big Timer Text wrapped in Viewbox for Responsive Scaling -->
