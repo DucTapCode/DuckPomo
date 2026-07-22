@@ -1,0 +1,43 @@
+<Window x:Class="Pomodoro.StrictModeOverlayWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Strict Mode Warning"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="#F2050505"
+        Topmost="True"
+        WindowState="Maximized"
+        ShowInTaskbar="False">
+    <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
+        <Border BorderBrush="#E55B5B" BorderThickness="2" Padding="48,40" CornerRadius="16" Background="#1C1C1E">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                <TextBlock Text="🚨 CẢNH BÁO STRICT MODE!" FontSize="30" FontWeight="Bold" Foreground="#E55B5B" HorizontalAlignment="Center" Margin="0,0,0,12"/>
+                <TextBlock Text="Bạn vừa rời khỏi ứng dụng tập trung!" FontSize="16" Foreground="#F4F4F5" HorizontalAlignment="Center" Margin="0,0,0,24"/>
+                
+                <Grid HorizontalAlignment="Center" Margin="0,0,0,24">
+                    <Ellipse Stroke="#E55B5B" StrokeThickness="3.5" Width="90" Height="90"/>
+                    <TextBlock Text="{Binding StrictModeCountdown}" FontSize="36" FontWeight="Bold" Foreground="#E55B5B" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Grid>
+
+                <TextBlock Text="Nhấp vào màn hình để quay lại ứng dụng ngay lập tức!" FontSize="14" Foreground="#A1A1AA" HorizontalAlignment="Center" Margin="0,0,0,20"/>
+                
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                    <Button Name="ReturnButton" Content="Quay lại ứng dụng" Width="150" Height="38" Background="#E55B5B" Foreground="White" FontWeight="Bold" BorderThickness="0" Margin="0,0,12,0" Cursor="Hand" FocusVisualStyle="{x:Null}">
+                        <Button.Resources>
+                            <Style TargetType="Border">
+                                <Setter Property="CornerRadius" Value="8"/>
+                            </Style>
+                        </Button.Resources>
+                    </Button>
+                    <Button Name="GiveUpButton" Content="Bỏ cuộc phiên này" Width="150" Height="38" Background="#2C2C2E" Foreground="#E55B5B" FontWeight="Bold" BorderBrush="#E55B5B" BorderThickness="1" Cursor="Hand" FocusVisualStyle="{x:Null}">
+                        <Button.Resources>
+                            <Style TargetType="Border">
+                                <Setter Property="CornerRadius" Value="8"/>
+                            </Style>
+                        </Button.Resources>
+                    </Button>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>

@@ -19,8 +19,8 @@ namespace Pomodoro.Models
         // Window size, position, and state persistence
         public double WindowLeft { get; set; } = -1;
         public double WindowTop { get; set; } = -1;
-        public double WindowWidth { get; set; } = 1100;
-        public double WindowHeight { get; set; } = 760;
+        public double WindowWidth { get; set; } = 1280;
+        public double WindowHeight { get; set; } = 720;
         public string WindowState { get; set; } = "Normal";
         public double TodoColumnWidth { get; set; } = -1;
         public string BackgroundStretchMode { get; set; } = "Cover";

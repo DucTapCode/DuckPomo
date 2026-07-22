@@ -23,12 +23,121 @@ namespace Pomodoro
         private RenderTargetBitmap? _gifAccumulator;
         private int _gifWidth;
         private int _gifHeight;
+        private StrictModeOverlayWindow? _strictModeOverlayWindow;
+
+        private WindowState _savedPreStrictWindowState = WindowState.Normal;
+        private double _savedLeft;
+        private double _savedTop;
+        private double _savedWidth;
+        private double _savedHeight;
+        private bool _isStrictFullscreenActive = false;
+
+        private const uint SWP_NOSIZE = 0x0001;
+        private const uint SWP_NOMOVE = 0x0002;
+        private const uint SWP_NOZORDER = 0x0004;
+        private const uint SWP_FRAMECHANGED = 0x0020;
+
+        private void ApplyStrictFullscreen(bool enable)
+        {
+            var handle = new WindowInteropHelper(this).Handle;
+
+            if (enable)
+            {
+                if (!_isStrictFullscreenActive)
+                {
+                    _savedPreStrictWindowState = this.WindowState;
+                    _savedLeft = this.Left;
+                    _savedTop = this.Top;
+                    _savedWidth = this.Width;
+                    _savedHeight = this.Height;
+                    _isStrictFullscreenActive = true;
+                }
+
+                if (CustomTitleBar != null) CustomTitleBar.Visibility = Visibility.Collapsed;
+                if (MinimizeBtn != null) MinimizeBtn.IsEnabled = false;
+                if (MaximizeBtn != null) MaximizeBtn.IsEnabled = false;
+
+                TaskbarManager.HideTaskbar();
+                this.WindowStyle = WindowStyle.None;
+                this.ResizeMode = ResizeMode.NoResize;
+                this.WindowState = WindowState.Normal;
+
+                IntPtr monitor = MonitorFromWindow(handle, 2); // MONITOR_DEFAULTTONEAREST
+                if (monitor != IntPtr.Zero)
+                {
+                    MONITORINFO monitorInfo = new MONITORINFO();
+                    monitorInfo.cbSize = Marshal.SizeOf(typeof(MONITORINFO));
+                    GetMonitorInfo(monitor, ref monitorInfo);
+
+                    RECT r = monitorInfo.rcMonitor;
+
+                    this.Left = r.Left;
+                    this.Top = r.Top;
+                    this.Width = r.Right - r.Left;
+                    this.Height = r.Bottom - r.Top;
+                }
+                this.Topmost = true;
+
+                if (handle != IntPtr.Zero)
+                {
+                    SetWindowPos(handle, IntPtr.Zero, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
+                }
+            }
+            else
+            {
+                if (_isStrictFullscreenActive)
+                {
+                    _isStrictFullscreenActive = false;
+                    this.Topmost = false;
+
+                    if (CustomTitleBar != null) CustomTitleBar.Visibility = Visibility.Visible;
+                    TaskbarManager.ShowTaskbar();
+                    this.ResizeMode = ResizeMode.CanResize;
+
+                    if (MinimizeBtn != null) MinimizeBtn.IsEnabled = true;
+                    if (MaximizeBtn != null) MaximizeBtn.IsEnabled = true;
+
+                    if (_savedPreStrictWindowState == WindowState.Maximized)
+                    {
+                        this.WindowState = WindowState.Normal;
+                        this.WindowState = WindowState.Maximized;
+                    }
+                    else
+                    {
+                        this.WindowState = WindowState.Normal;
+                        this.Left = _savedLeft;
+                        this.Top = _savedTop;
+                        this.Width = _savedWidth;
+                        this.Height = _savedHeight;
+                    }
+
+                    if (handle != IntPtr.Zero)
+                    {
+                        SetWindowPos(handle, IntPtr.Zero, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
+                    }
+                }
+            }
+        }
 
         public MainWindow()
         {
             InitializeComponent();
             var viewModel = new MainViewModel();
             DataContext = viewModel;
+
+            this.PreviewKeyDown += (s, e) =>
+            {
+                if (e.Key == System.Windows.Input.Key.F11)
+                {
+                    e.Handled = true;
+                    ApplyStrictFullscreen(!_isStrictFullscreenActive);
+                }
+                else if (e.Key == System.Windows.Input.Key.Escape && _isStrictFullscreenActive)
+                {
+                    e.Handled = true;
+                    ApplyStrictFullscreen(false);
+                }
+            };
 
             // Load saved window size and position
             var settings = viewModel.Settings;
@@ -65,6 +174,8 @@ namespace Pomodoro
             // Save window size, position, and column layout on close
             this.Closing += (s, e) =>
             {
+                TaskbarManager.ShowTaskbar();
+
                 if (this.WindowState == WindowState.Normal)
                 {
                     settings.WindowLeft = this.Left;
@@ -113,23 +224,74 @@ namespace Pomodoro
 
             this.StateChanged += (s, e) =>
             {
-                // Reset margin to 0 since WmGetMinMaxInfo handles the exact work area bounds perfectly
-                RootWindowGrid.Margin = new Thickness(0);
-                this.UpdateLayout();
+                if (this.WindowState == WindowState.Minimized)
+                {
+                    if (BackgroundVideoPlayer != null && BackgroundVideoPlayer.Visibility == Visibility.Visible)
+                    {
+                        BackgroundVideoPlayer.Pause();
+                    }
+                }
+                else
+                {
+                    if (BackgroundVideoPlayer != null && BackgroundVideoPlayer.Visibility == Visibility.Visible)
+                    {
+                        BackgroundVideoPlayer.Play();
+                    }
+                    RootWindowGrid.Margin = new Thickness(0);
+                    this.UpdateLayout();
+                }
             };
             this.Activated += (s, e) => 
             {
                 viewModel.OnAppActivated();
+                if (_strictModeOverlayWindow != null)
+                {
+                    _strictModeOverlayWindow.Hide();
+                }
             };
-            this.Deactivated += (s, e) => viewModel.OnAppDeactivated();
+            this.Deactivated += (s, e) =>
+            {
+                viewModel.OnAppDeactivated();
+                if (viewModel.IsRunning && viewModel.TimerMode == "Focus" && viewModel.Settings.IsStrictModeEnabled)
+                {
+                    if (_strictModeOverlayWindow == null)
+                    {
+                        _strictModeOverlayWindow = new StrictModeOverlayWindow(this);
+                    }
+                    _strictModeOverlayWindow.Show();
+                    _strictModeOverlayWindow.Activate();
+                }
+            };
 
-            // Subscribe to PropertyChanged to update background media
+            // Subscribe to PropertyChanged to update background media and strict mode fullscreen/overlay
             viewModel.PropertyChanged += (s, e) =>
             {
                 if (e.PropertyName == nameof(MainViewModel.SelectedThemeName) ||
                     e.PropertyName == nameof(MainViewModel.Settings))
                 {
                     UpdateBackgroundMedia();
+                }
+                else if (e.PropertyName == nameof(MainViewModel.IsStrictModeWarningVisible))
+                {
+                    if (!viewModel.IsStrictModeWarningVisible && _strictModeOverlayWindow != null && _strictModeOverlayWindow.IsVisible)
+                    {
+                        _strictModeOverlayWindow.Hide();
+                    }
+                }
+                else if (e.PropertyName == nameof(MainViewModel.IsRunning) || e.PropertyName == nameof(MainViewModel.TimerMode))
+                {
+                    if (viewModel.IsRunning && viewModel.TimerMode == "Focus" && viewModel.Settings.IsStrictModeEnabled)
+                    {
+                        ApplyStrictFullscreen(true);
+                    }
+                    else
+                    {
+                        ApplyStrictFullscreen(false);
+                        if (_strictModeOverlayWindow != null && _strictModeOverlayWindow.IsVisible)
+                        {
+                            _strictModeOverlayWindow.Hide();
+                        }
+                    }
                 }
             };
             this.Loaded += (s, e) => UpdateBackgroundMedia();
@@ -175,12 +337,31 @@ namespace Pomodoro
 
         private void MinimizeButton_Click(object sender, RoutedEventArgs e)
         {
+            if (DataContext is MainViewModel vm && vm.IsRunning && vm.TimerMode == "Focus" && vm.Settings.IsStrictModeEnabled)
+            {
+                return;
+            }
             this.WindowState = WindowState.Minimized;
         }
 
         private void MaximizeButton_Click(object sender, RoutedEventArgs e)
         {
-            this.WindowState = this.WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
+            if (DataContext is MainViewModel vm && vm.IsRunning && vm.TimerMode == "Focus" && vm.Settings.IsStrictModeEnabled)
+            {
+                return;
+            }
+            if (this.WindowState == WindowState.Maximized)
+            {
+                this.WindowState = WindowState.Normal;
+                this.Width = 1280;
+                this.Height = 720;
+                this.Left = (SystemParameters.WorkArea.Width - 1280) / 2 + SystemParameters.WorkArea.Left;
+                this.Top = (SystemParameters.WorkArea.Height - 720) / 2 + SystemParameters.WorkArea.Top;
+            }
+            else
+            {
+                this.WindowState = WindowState.Maximized;
+            }
         }
 
         private void CloseButton_Click(object sender, RoutedEventArgs e)
@@ -190,11 +371,26 @@ namespace Pomodoro
 
         private void TitleBar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
+            if (DataContext is MainViewModel vm && vm.IsRunning && vm.TimerMode == "Focus" && vm.Settings.IsStrictModeEnabled)
+            {
+                return;
+            }
             if (e.ChangedButton == MouseButton.Left)
             {
                 if (e.ClickCount == 2)
                 {
-                    this.WindowState = this.WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
+                    if (this.WindowState == WindowState.Maximized)
+                    {
+                        this.WindowState = WindowState.Normal;
+                        this.Width = 1280;
+                        this.Height = 720;
+                        this.Left = (SystemParameters.WorkArea.Width - 1280) / 2 + SystemParameters.WorkArea.Left;
+                        this.Top = (SystemParameters.WorkArea.Height - 720) / 2 + SystemParameters.WorkArea.Top;
+                    }
+                    else
+                    {
+                        this.WindowState = WindowState.Maximized;
+                    }
                 }
                 else
                 {
@@ -202,7 +398,9 @@ namespace Pomodoro
                     {
                         var point = PointToScreen(e.GetPosition(this));
                         this.WindowState = WindowState.Normal;
-                        this.Left = point.X - this.Width / 2;
+                        this.Width = 1280;
+                        this.Height = 720;
+                        this.Left = point.X - 1280 / 2;
                         this.Top = point.Y - 20;
                     }
                     this.DragMove();
@@ -342,12 +540,32 @@ namespace Pomodoro
                 monitorInfo.cbSize = Marshal.SizeOf(typeof(MONITORINFO));
                 GetMonitorInfo(monitor, ref monitorInfo);
 
-                RECT rcWorkArea = monitorInfo.rcWork;
+                bool isStrictFocus = false;
+                if (DataContext is MainViewModel vm)
+                {
+                    isStrictFocus = vm.IsRunning && vm.TimerMode == "Focus" && vm.Settings.IsStrictModeEnabled;
+                }
 
-                mmi.ptMaxPosition.X = rcWorkArea.Left;
-                mmi.ptMaxPosition.Y = rcWorkArea.Top;
-                mmi.ptMaxSize.X = rcWorkArea.Right - rcWorkArea.Left;
-                mmi.ptMaxSize.Y = rcWorkArea.Bottom - rcWorkArea.Top;
+                if (isStrictFocus || _isStrictFullscreenActive)
+                {
+                    // True Fullscreen covering entire monitor screen including taskbar
+                    mmi.ptMaxPosition.X = 0;
+                    mmi.ptMaxPosition.Y = 0;
+                    mmi.ptMaxSize.X = monitorInfo.rcMonitor.Right - monitorInfo.rcMonitor.Left;
+                    mmi.ptMaxSize.Y = monitorInfo.rcMonitor.Bottom - monitorInfo.rcMonitor.Top;
+                }
+                else
+                {
+                    // Standard Maximized fitting within work area (taskbar visible)
+                    mmi.ptMaxPosition.X = monitorInfo.rcWork.Left - monitorInfo.rcMonitor.Left;
+                    mmi.ptMaxPosition.Y = monitorInfo.rcWork.Top - monitorInfo.rcMonitor.Top;
+                    mmi.ptMaxSize.X = monitorInfo.rcWork.Right - monitorInfo.rcWork.Left;
+                    mmi.ptMaxSize.Y = monitorInfo.rcWork.Bottom - monitorInfo.rcWork.Top;
+                }
+
+                // Enforce minimum window width (960) and height (540) in 16:9 ratio
+                mmi.ptMinTrackSize.X = 960;
+                mmi.ptMinTrackSize.Y = 540;
             }
 
             Marshal.StructureToPtr(mmi, lParam, true);
@@ -831,6 +1049,36 @@ namespace Pomodoro
         private void Drawer_MouseDown(object sender, MouseButtonEventArgs e)
         {
             e.Handled = true;
+        }
+    }
+
+    public static class TaskbarManager
+    {
+        [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+        private static extern IntPtr FindWindow(string lpClassName, string lpWindowName);
+
+        [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+        private static extern bool ShowWindow(IntPtr hwnd, int nCmdShow);
+
+        private const int SW_HIDE = 0;
+        private const int SW_SHOW = 5;
+
+        public static void HideTaskbar()
+        {
+            IntPtr hwnd = FindWindow("Shell_TrayWnd", string.Empty);
+            if (hwnd != IntPtr.Zero)
+            {
+                ShowWindow(hwnd, SW_HIDE);
+            }
+        }
+
+        public static void ShowTaskbar()
+        {
+            IntPtr hwnd = FindWindow("Shell_TrayWnd", string.Empty);
+            if (hwnd != IntPtr.Zero)
+            {
+                ShowWindow(hwnd, SW_SHOW);
+            }
         }
     }
 }

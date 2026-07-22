@@ -9,8 +9,11 @@ namespace Pomodoro;
 /// </summary>
 public partial class App : Application
 {
+    private static System.Threading.Mutex? _appMutex;
+
     protected override void OnStartup(StartupEventArgs e)
     {
+        _appMutex = new System.Threading.Mutex(true, "DuckPomodoroAppMutex", out bool createdNew);
         base.OnStartup(e);
         CreateStartMenuShortcut();
     }

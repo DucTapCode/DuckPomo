@@ -29,6 +29,7 @@ namespace Pomodoro.ViewModels
         private int _totalSessionDurationSeconds;
         private bool _isRunning;
         private string _timerMode = "Focus"; // "Focus", "Short Break", "Long Break"
+        private int _completedFocusSessionsCount;
         private double _progressValue;
         private string _timerText = "25:00";
         
@@ -1253,10 +1254,19 @@ namespace Pomodoro.ViewModels
 
         private void ResetTimer()
         {
-            // Reset/Cancel wipes session progress, does NOT record to history
+            // Give Up / Cancel session: stops timer, resets warnings, and transitions immediately to Short Break (if Focus) or Focus (if Break)
             PauseTimer();
-            ResetTimerValues();
-            UpdateDiscordPresence();
+            IsStrictModeWarningVisible = false;
+            _strictModeCountdown = 5;
+
+            if (TimerMode == "Focus")
+            {
+                SwitchMode("Short Break");
+            }
+            else
+            {
+                SwitchMode("Focus");
+            }
         }
 
         private void SwitchMode(string mode)
@@ -1335,22 +1345,30 @@ namespace Pomodoro.ViewModels
                 UpdateStatistics();
             }
 
-            // Transition automatically if enabled
-            if (Settings.AutoStartNextSession)
+            // Transition automatically or switch mode according to standard Pomodoro (4 focus cycles -> long break)
+            string nextMode;
+            if (TimerMode == "Focus")
             {
-                if (TimerMode == "Focus")
+                _completedFocusSessionsCount++;
+                if (_completedFocusSessionsCount % 4 == 0)
                 {
-                    SwitchMode("Short Break");
+                    nextMode = "Long Break";
                 }
                 else
                 {
-                    SwitchMode("Focus");
+                    nextMode = "Short Break";
                 }
-                StartTimer();
             }
             else
             {
-                ResetTimerValues();
+                nextMode = "Focus";
+            }
+
+            SwitchMode(nextMode);
+
+            if (Settings.AutoStartNextSession)
+            {
+                StartTimer();
             }
         }
 

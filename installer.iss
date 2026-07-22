@@ -10,6 +10,7 @@
 ; NOTE: The value of AppId uniquely identifies this application. Do not use the same AppId value in installers for other applications.
 ; (To generate a new GUID, click Tools | Generate GUID inside the Inno Setup IDE.)
 AppId={{5D8E8F55-1E9D-424A-8A4E-4017AA1A9B6B}
+AppMutex=DuckPomodoroAppMutex
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppPublisher={#MyAppPublisher}
@@ -21,8 +22,8 @@ OutputBaseFilename=DuckPomodoro_Setup
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
-SetupIconFile=d:\Duc\Code\Projects\Pomodoro\icon.ico
-OutputDir=d:\Duc\Code\Projects\Pomodoro\bin\Release
+SetupIconFile=icon.ico
+OutputDir=bin\Release
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
@@ -31,7 +32,7 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-Source: "d:\Duc\Code\Projects\Pomodoro\bin\Release\net10.0-windows10.0.19041.0\win-x64\publish\Pomodoro.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "bin\Release\net10.0-windows10.0.19041.0\win-x64\publish\Pomodoro.exe"; DestDir: "{app}"; Flags: ignoreversion
 ; NOTE: Don't pack .pdb or .xml files as they are only for debugging
 
 [Icons]
