@@ -58,11 +58,15 @@ DuckPomodoro/
 
 ### A. Giao diện Kính mờ (Glassmorphism / Acrylic Custom Window)
 * **Cơ chế**: Cửa sổ chính được thiết kế không viền hệ thống (`WindowStyle="None"`, `AllowsTransparency="True"`, `Background="Transparent"`).
-* **Pha màu kính thích ứng (Adaptive Acrylic Tinting)**:
-  * Khi người dùng tải hình nền (Custom Image), thuật toán sẽ trích xuất màu sắc chủ đạo dựa trên công thức **Độ sáng tương đối (Relative Luminance)** của W3C:
-      $$Y = \frac{0.2126 \times R + 0.7152 \times G + 0.0722 \times B}{255}$$
-  * Nếu $Y < 0.45$, hình nền được nhận diện là **Tối (Dark)** $\rightarrow$ Đổi chữ sang màu trắng và pha kính tối. Ngược lại là **Sáng (Light)** $\rightarrow$ Đổi chữ sang màu đen và pha kính sáng.
-  * Để tạo hiệu ứng hòa hợp màu sắc (Acrylic), ứng dụng sẽ **pha thêm 20% màu chủ đạo** của hình nền vào lớp kính mờ có **độ trong suốt 15% (Opacity = 40/255)**.
+* **Pha màu kính siêu trong suốt (Ultra-Translucent Glassmorphism < 20%)**:
+  * Khi người dùng tải hình nền (Custom Image), thuật toán giải mã tự động downscale ảnh về $100 \times 100\text{ px}$ và phân tích mẫu màu bất đồng bộ (`Task.Run`).
+  * Hạ mức Opacity của `CardBackgroundBrush` xuống **~18% Opacity (`45/255`)**, kết hợp đường viền kính vi-mảnh 1px màu trắng mờ (`rgba(255, 255, 255, 0.15)`). Giúp định hình các khung làm việc sắc nét mà không che phủ hình nền nghệ thuật bên dưới.
+* **Tách chữ số Pomodoro trực tiếp lên Wallpaper**:
+  * Loại bỏ hoàn toàn khối Card đục bao quanh đồng hồ. Đưa các chữ số thời gian `25:00` đứng 100% trực tiếp trên hình nền kết hợp `DropShadowEffect` (`BlurRadius=12, ShadowDepth=2, Opacity=0.75`).
+  * Chỉ giữ lại các thanh điều khiển nhỏ gọn dạng viên thuốc (Pill bar) giúp khoảng giữa màn hình trống trải 100%.
+* **FAB (Floating Action Button) & Modal Popup tạo nhiệm vụ**:
+  * Ẩn hoàn toàn form nhập Task khỏi cột danh sách Todo. Thêm nút icon `+` Accent nổi ngay cạnh tiêu đề "Nhiệm vụ".
+  * Khi click `+`, mở khung nhập Modal Glassmorphism nhỏ gọn ngay giữa màn hình. Khi gõ Enter hoặc bấm "Tạo thẻ", Modal sẽ tự động ẩn đi và đưa thẻ mới vào danh sách.
 * **Sửa lỗi phóng to (Maximize) không lấp đầy và bị hở viền**:
   * **Giải pháp**: Nhờ có Win32 Hook `WM_GETMINMAXINFO` quản lý chính xác phạm vi làm việc của màn hình (`rcWorkArea`), chúng ta không cần co lề `8px` nữa (giữ `Margin = 0` cố định). Chỉ cần gọi `this.UpdateLayout()` trong sự kiện `StateChanged` để ép buộc WPF cập nhật toàn bộ khung bố trí và lấp đầy màn hình khi phóng to.
 

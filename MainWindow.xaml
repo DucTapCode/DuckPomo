@@ -511,12 +511,12 @@
         <!-- ================= MAIN CONTENT AREA ================= -->
         <Grid Grid.Row="1" Margin="24">
             <Grid.ColumnDefinitions>
-                <!-- LEFT COLUMN: TODO LIST -->
-                <ColumnDefinition x:Name="TodoColumn" Width="3.5*" MinWidth="180"/>
+                <!-- LEFT COLUMN: TODO LIST (Narrower 3.0*) -->
+                <ColumnDefinition x:Name="TodoColumn" Width="3.0*" MinWidth="56"/>
                 <!-- GAP / GRID SPLITTER -->
                 <ColumnDefinition Width="32"/>
-                <!-- RIGHT COLUMN: POMODORO TIMER -->
-                <ColumnDefinition x:Name="PomoColumn" Width="6.5*" MinWidth="320"/>
+                <!-- RIGHT COLUMN: POMODORO TIMER (7.0*) -->
+                <ColumnDefinition x:Name="PomoColumn" Width="7.0*" MinWidth="320"/>
             </Grid.ColumnDefinitions>
 
             <GridSplitter Grid.Column="1" 
@@ -525,6 +525,7 @@
                           VerticalAlignment="Stretch" 
                           Background="Transparent"
                           Cursor="SizeWE"
+                          Visibility="{Binding IsTodoDrawerCollapsed, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse}"
                           FocusVisualStyle="{x:Null}">
                 <GridSplitter.Template>
                     <ControlTemplate TargetType="GridSplitter">
@@ -550,114 +551,131 @@
                 </GridSplitter.Template>
             </GridSplitter>
 
-            <!-- ================= BÊN TRÁI: TODO LIST ================= -->
+            <!-- ================= BÊN TRÁI: TODO LIST (COLLAPSIBLE DRAWER) ================= -->
             <Grid Grid.Column="0">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/> <!-- Header & Search Box -->
-                    <RowDefinition Height="Auto"/> <!-- Input form -->
-                    <RowDefinition Height="*"/>    <!-- Tasks List -->
-                    <RowDefinition Height="Auto"/> <!-- Active Focus Task footer -->
-                </Grid.RowDefinitions>
+                <!-- COLLAPSED STATE: SLIM ICON BAR (Width 56px) -->
+                <Border Visibility="{Binding IsTodoDrawerCollapsed, Converter={StaticResource BoolToVisibilityConverter}}"
+                        Background="{Binding CardBackgroundBrush}" 
+                        BorderBrush="{Binding CardBorderBrush}" 
+                        BorderThickness="1" 
+                        CornerRadius="12" 
+                        Padding="8"
+                        WindowChrome.IsHitTestVisibleInChrome="True">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/> <!-- Expand Toggle Button -->
+                            <RowDefinition Height="*"/>    <!-- Task Badge / Count Icon -->
+                        </Grid.RowDefinitions>
 
-                <!-- Header & Search Box Row -->
-                <Grid Grid.Row="0" Margin="0,0,0,16">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-                    
-                    <!-- Header Text (Left) -->
-                    <TextBlock Grid.Column="0" Text="Nhiệm vụ" FontSize="22" FontWeight="Bold" Foreground="{Binding TextForegroundBrush}" VerticalAlignment="Center"/>
-                    
-                    <!-- Compact Search Box (Right) -->
-                    <Border Grid.Column="1" Background="#05FFFFFF" BorderBrush="#0AFFFFFF" BorderThickness="1" CornerRadius="12" Padding="4" Width="180" VerticalAlignment="Center" WindowChrome.IsHitTestVisibleInChrome="True">
-                        <Grid>
-                            <!-- TextBox with Left padding to leave space for the magnifying glass -->
-                            <TextBox x:Name="SearchBox" Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}" 
-                                     Background="{Binding TextBoxBackgroundBrush}" BorderBrush="{Binding CardBorderBrush}" Foreground="{Binding TextForegroundBrush}" 
-                                     Padding="24,6,8,6" FontSize="12.5" BorderThickness="1">
-                                <TextBox.Resources>
-                                    <Style TargetType="{x:Type Border}">
-                                        <Setter Property="CornerRadius" Value="8"/>
-                                    </Style>
-                                </TextBox.Resources>
-                            </TextBox>
-                            <!-- Magnifying Glass Icon (dynamically colored by SelectedAccentBrush) -->
-                            <Path Data="M15.5,14L11.24,9.74C11.72,9.05 12,8.21 12,7.3C12,4.92 10.08,3 7.7,3C5.32,3 3.4,4.92 3.4,7.3C3.4,9.68 5.32,11.6 7.7,11.6C8.61,11.6 9.45,11.32 10.14,10.84L14.4,15.1L15.5,14 M5,7.3C5,5.81 6.21,4.6 7.7,4.6C9.19,4.6 10.4,5.81 10.4,7.3C10.4,8.79 9.19,10 7.7,10C6.21,10 5,8.79 5,7.3Z" 
-                                  Fill="{Binding SelectedAccentBrush}" 
-                                  Opacity="0.6"
-                                  Width="13" Height="13" 
-                                  Stretch="Fill" 
-                                  HorizontalAlignment="Left" 
-                                  VerticalAlignment="Center" 
-                                  Margin="8,0,0,0" 
-                                  IsHitTestVisible="False"/>
-                        </Grid>
-                    </Border>
-                </Grid>
+                        <!-- Expand Button (Chevron Right) -->
+                        <Button Grid.Row="0" Command="{Binding ToggleTodoDrawerCommand}" Background="Transparent" BorderThickness="0" Width="36" Height="36" Cursor="Hand" ToolTip="Mở rộng danh sách nhiệm vụ" Focusable="False">
+                            <Button.Template>
+                                <ControlTemplate TargetType="Button">
+                                    <Border x:Name="Bg" Background="Transparent" CornerRadius="8">
+                                        <Path x:Name="Chevron" Data="M1,1 L7,7 L1,13" Stroke="{Binding DataContext.TextForegroundBrush, ElementName=RootWindow}" StrokeThickness="2" HorizontalAlignment="Center" VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5">
+                                            <Path.RenderTransform>
+                                                <RotateTransform Angle="180"/>
+                                            </Path.RenderTransform>
+                                        </Path>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="Bg" Property="Background" Value="#25FFFFFF"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Button.Template>
+                        </Button>
 
-                <!-- Input form [Double-Bezel nested architecture] -->
-                <Border Grid.Row="1" Background="#05FFFFFF" BorderBrush="#0AFFFFFF" BorderThickness="1" CornerRadius="12" Padding="4" Margin="0,0,0,16">
-                    <Border Background="{Binding CardBackgroundBrush}" BorderBrush="{Binding CardBorderBrush}" BorderThickness="1" CornerRadius="8" Padding="12">
-                        <StackPanel>
-                            <TextBox Text="{Binding NewTaskTitle, UpdateSourceTrigger=PropertyChanged}" 
-                                     Background="{Binding TextBoxBackgroundBrush}" BorderBrush="{Binding CardBorderBrush}" Foreground="{Binding TextForegroundBrush}" 
-                                     Padding="8" FontSize="13" Margin="0,0,0,8">
-                                <TextBox.InputBindings>
-                                    <KeyBinding Key="Enter" Command="{Binding AddTaskCommand}"/>
-                                </TextBox.InputBindings>
-                                <TextBox.Resources>
-                                    <Style TargetType="{x:Type Border}">
-                                        <Setter Property="CornerRadius" Value="4"/>
-                                    </Style>
-                                </TextBox.Resources>
-                            </TextBox>
-                            
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                
-                                <!-- Dropdown Selectors -->
-                                <StackPanel Grid.Column="0" Orientation="Horizontal">
-                                    <!-- Priority selector -->
-                                    <ComboBox SelectedValue="{Binding NewTaskPriority}" SelectedValuePath="Content" Style="{StaticResource ModernComboBox}" Width="85" Height="28" Margin="0,0,8,0">
-                                        <ComboBoxItem Content="High"/>
-                                        <ComboBoxItem Content="Medium" IsSelected="True"/>
-                                        <ComboBoxItem Content="Low"/>
-                                    </ComboBox>
+                        <!-- Icon Bar Info: List Icon & Uncompleted Tasks Counter Badge -->
+                        <StackPanel Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center">
+                            <!-- List Icon -->
+                            <Button Command="{Binding ToggleTodoDrawerCommand}" Background="Transparent" BorderThickness="0" Cursor="Hand" ToolTip="Xem danh sách nhiệm vụ">
+                                <Button.Template>
+                                    <ControlTemplate TargetType="Button">
+                                        <Grid Width="28" Height="28">
+                                            <Path Data="M3,6 H21 M3,12 H21 M3,18 H15" Stroke="{Binding DataContext.TextForegroundBrush, ElementName=RootWindow}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Grid>
+                                    </ControlTemplate>
+                                </Button.Template>
+                            </Button>
 
-                                    <!-- Tag selector -->
-                                    <ComboBox SelectedValue="{Binding NewTaskTag}" SelectedValuePath="Content" Style="{StaticResource ModernComboBox}" Width="85" Height="28" Margin="0,0,8,0">
-                                        <ComboBoxItem Content="Work" IsSelected="True"/>
-                                        <ComboBoxItem Content="Study"/>
-                                        <ComboBoxItem Content="Personal"/>
-                                        <ComboBoxItem Content="Health"/>
-                                    </ComboBox>
-
-                                    <!-- Est Pomodoros -->
-                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                        <TextBlock Text="Est:" FontSize="10" Foreground="{Binding TextForegroundBrush}" Opacity="0.65" VerticalAlignment="Center" Margin="0,0,4,0"/>
-                                        <ComboBox SelectedValue="{Binding NewTaskEstimate}" SelectedValuePath="Content" Style="{StaticResource ModernComboBox}" Width="50" Height="28">
-                                            <ComboBoxItem Content="1" IsSelected="True"/>
-                                            <ComboBoxItem Content="2"/>
-                                            <ComboBoxItem Content="3"/>
-                                            <ComboBoxItem Content="4"/>
-                                            <ComboBoxItem Content="5"/>
-                                            <ComboBoxItem Content="8"/>
-                                        </ComboBox>
-                                    </StackPanel>
-                                </StackPanel>
-
-                                <!-- Add button -->
-                                <Button Grid.Column="1" Command="{Binding AddTaskCommand}" Style="{StaticResource AccentButton}" Content="Thêm" Width="60" Height="28" Padding="0"/>
-                            </Grid>
+                            <!-- Badge showing uncompleted tasks count -->
+                            <Border Background="{Binding SelectedAccentBrush}" CornerRadius="10" Width="24" Height="24" Margin="0,12,0,0" ToolTip="Số nhiệm vụ chưa xong">
+                                <TextBlock Text="{Binding UncompletedTasksCount}" Foreground="#FFFFFF" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
                         </StackPanel>
-                    </Border>
+                    </Grid>
                 </Border>
 
-                <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" Style="{StaticResource MinimalScrollViewer}" Focusable="False" FocusVisualStyle="{x:Null}">
+                <!-- EXPANDED STATE: FULL TODO LIST -->
+                <Grid Visibility="{Binding IsTodoDrawerCollapsed, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/> <!-- Header & Search Box -->
+                        <RowDefinition Height="*"/>    <!-- Tasks List -->
+                        <RowDefinition Height="Auto"/> <!-- Active Focus Task footer -->
+                    </Grid.RowDefinitions>
+
+                    <!-- Header & Search Box Row -->
+                    <Grid Grid.Row="0" Margin="0,0,0,16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        
+                        <!-- Collapse Toggle Button (Chevron Left) -->
+                        <Button Grid.Column="0" Command="{Binding ToggleTodoDrawerCommand}" Background="Transparent" BorderThickness="0" Width="32" Height="32" Margin="0,0,6,0" Cursor="Hand" ToolTip="Thu gọn danh sách" WindowChrome.IsHitTestVisibleInChrome="True" Focusable="False">
+                            <Button.Template>
+                                <ControlTemplate TargetType="Button">
+                                    <Border x:Name="Bg" Background="Transparent" CornerRadius="8">
+                                        <Path x:Name="Chevron" Data="M1,1 L7,7 L1,13" Stroke="{Binding DataContext.TextForegroundBrush, ElementName=RootWindow}" StrokeThickness="2" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="Bg" Property="Background" Value="#25FFFFFF"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Button.Template>
+                        </Button>
+
+                        <!-- Header Text & Floating Add Task Button (+) -->
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="Nhiệm vụ" FontSize="20" FontWeight="Bold" Foreground="{Binding TextForegroundBrush}" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                            <!-- FAB (+) Floating Action Button -->
+                            <Button Command="{Binding ToggleAddTaskModalCommand}" Style="{StaticResource AccentButton}" Content="+" Width="26" Height="26" Padding="0" FontSize="15" FontWeight="Bold" ToolTip="Tạo nhiệm vụ mới" VerticalAlignment="Center" WindowChrome.IsHitTestVisibleInChrome="True"/>
+                        </StackPanel>
+                        
+                        <!-- Compact Search Box (Right) -->
+                        <Border Grid.Column="2" Background="#05FFFFFF" BorderBrush="#0AFFFFFF" BorderThickness="1" CornerRadius="12" Padding="4" Width="170" VerticalAlignment="Center" WindowChrome.IsHitTestVisibleInChrome="True">
+                            <Grid>
+                                <!-- TextBox with Left padding to leave space for the magnifying glass -->
+                                <TextBox x:Name="SearchBox" Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}" 
+                                         Background="{Binding TextBoxBackgroundBrush}" BorderBrush="{Binding CardBorderBrush}" Foreground="{Binding TextForegroundBrush}" 
+                                         Padding="24,6,8,6" FontSize="12.5" BorderThickness="1">
+                                    <TextBox.Resources>
+                                        <Style TargetType="{x:Type Border}">
+                                            <Setter Property="CornerRadius" Value="8"/>
+                                        </Style>
+                                    </TextBox.Resources>
+                                </TextBox>
+                                <!-- Magnifying Glass Icon (dynamically colored by SelectedAccentBrush) -->
+                                <Path Data="M15.5,14L11.24,9.74C11.72,9.05 12,8.21 12,7.3C12,4.92 10.08,3 7.7,3C5.32,3 3.4,4.92 3.4,7.3C3.4,9.68 5.32,11.6 7.7,11.6C8.61,11.6 9.45,11.32 10.14,10.84L14.4,15.1L15.5,14 M5,7.3C5,5.81 6.21,4.6 7.7,4.6C9.19,4.6 10.4,5.81 10.4,7.3C10.4,8.79 9.19,10 7.7,10C6.21,10 5,8.79 5,7.3Z" 
+                                      Fill="{Binding SelectedAccentBrush}" 
+                                      Opacity="0.6"
+                                      Width="13" Height="13" 
+                                      Stretch="Fill" 
+                                      HorizontalAlignment="Left" 
+                                      VerticalAlignment="Center" 
+                                      Margin="8,0,0,0" 
+                                      IsHitTestVisible="False"/>
+                            </Grid>
+                        </Border>
+                    </Grid>
+
+                    <!-- Tasks List ScrollViewer (Grid.Row 1) -->
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Style="{StaticResource MinimalScrollViewer}" Focusable="False" FocusVisualStyle="{x:Null}">
                     <ItemsControl ItemsSource="{Binding Tasks}" Focusable="False" FocusVisualStyle="{x:Null}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
@@ -845,14 +863,15 @@
                     </ItemsControl>
                 </ScrollViewer>
 
-                <!-- Active Focus task footer bar -->
-                <Border Grid.Row="3" Background="{Binding CardBackgroundBrush}" BorderBrush="{Binding CardBorderBrush}" BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,16,0,0">
-                    <StackPanel>
-                        <TextBlock Text="ĐANG CHỌN TẬP TRUNG" FontSize="9" Foreground="{Binding TextForegroundBrush}" Opacity="0.6" FontWeight="Bold"/>
-                        <TextBlock Text="{Binding ActiveFocusTask.Title, TargetNullValue='(Chưa kích hoạt nhiệm vụ)'}" FontSize="13" FontWeight="SemiBold" Foreground="#E55B5B" Margin="0,2,0,0" TextTrimming="CharacterEllipsis"/>
-                    </StackPanel>
-                </Border>
-            </Grid>
+                        <!-- Active Focus task footer bar -->
+                        <Border Grid.Row="2" Background="{Binding CardBackgroundBrush}" BorderBrush="{Binding CardBorderBrush}" BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,16,0,0">
+                            <StackPanel>
+                                <TextBlock Text="ĐANG CHỌN TẬP TRUNG" FontSize="9" Foreground="{Binding TextForegroundBrush}" Opacity="0.6" FontWeight="Bold"/>
+                                <TextBlock Text="{Binding ActiveFocusTask.Title, TargetNullValue='(Chưa kích hoạt nhiệm vụ)'}" FontSize="13" FontWeight="SemiBold" Foreground="#E55B5B" Margin="0,2,0,0" TextTrimming="CharacterEllipsis"/>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+                </Grid>
 
             <!-- ================= BÊN PHẢI: POMODORO TIMER ================= -->
             <Grid Grid.Column="2">
@@ -920,48 +939,54 @@
                     </StackPanel>
                 </Grid>
 
-                <!-- Core Timer Panel [Double-Bezel nested architecture] -->
-                <Border Grid.Row="1" Background="#05FFFFFF" BorderBrush="#0AFFFFFF" BorderThickness="1" CornerRadius="12" Padding="4">
-                    <Border Background="{Binding CardBackgroundBrush}" BorderBrush="{Binding CardBorderBrush}" BorderThickness="1" CornerRadius="8" Padding="24">
-                        <Grid>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="*"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
+                <!-- Core Timer Panel (Directly on Wallpaper) -->
+                <Grid Grid.Row="1" VerticalAlignment="Center">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
 
-                            <!-- Top: Switch buttons -->
-                            <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,16" WindowChrome.IsHitTestVisibleInChrome="True">
-                                <RadioButton Content="Tập trung" IsChecked="{Binding IsFocusMode, Mode=TwoWay}" Command="{Binding SwitchModeCommand}" CommandParameter="Focus" Style="{StaticResource RadioButtonMode}"/>
-                                <RadioButton Content="Nghỉ ngắn" IsChecked="{Binding IsShortBreakMode, Mode=TwoWay}" Command="{Binding SwitchModeCommand}" CommandParameter="Short Break" Style="{StaticResource RadioButtonMode}"/>
-                                <RadioButton Content="Nghỉ dài" IsChecked="{Binding IsLongBreakMode, Mode=TwoWay}" Command="{Binding SwitchModeCommand}" CommandParameter="Long Break" Style="{StaticResource RadioButtonMode}"/>
-                            </StackPanel>
-
-                            <!-- Middle: Big Timer Text wrapped in Viewbox for Responsive Scaling -->
-                            <Viewbox Grid.Row="1" MaxHeight="260" MaxWidth="380" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="10">
-                                <StackPanel>
-                                    <TextBlock Text="{Binding TimerText}" FontSize="88" FontWeight="Light" HorizontalAlignment="Center" Foreground="{Binding TextForegroundBrush}" Margin="0,-10,0,0"/>
-                                    <TextBlock Text="{Binding TimerMode}" FontSize="12" FontWeight="SemiBold" Foreground="{Binding TextForegroundBrush}" Opacity="0.65" HorizontalAlignment="Center"/>
-
-                                    <!-- Progress line underneath -->
-                                    <Border Background="#1E1E22" CornerRadius="2.5" Height="5" Width="240" Margin="0,20,0,0">
-                                        <ProgressBar Value="{Binding ProgressValue}" Minimum="0" Maximum="1" Foreground="{Binding SelectedAccentBrush}" Height="5" BorderThickness="0" Background="Transparent"/>
-                                    </Border>
-                                </StackPanel>
-                            </Viewbox>
-
-                            <!-- Bottom: Actions -->
-                            <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,16,0,0" WindowChrome.IsHitTestVisibleInChrome="True">
-                                <!-- Start / Pause -->
-                                <Button Command="{Binding StartTimerCommand}" Style="{StaticResource AccentButton}" Content="Bắt đầu" Width="130" Height="40" Margin="0,0,12,0" Visibility="{Binding IsRunning, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse}"/>
-                                <Button Command="{Binding PauseTimerCommand}" Style="{StaticResource NeutralButton}" Content="Tạm dừng" Width="130" Height="40" Margin="0,0,12,0" Visibility="{Binding IsRunning, Converter={StaticResource BoolToVisibilityConverter}}"/>
-
-                                <!-- Reset / Give Up -->
-                                <Button Command="{Binding ResetTimerCommand}" Style="{StaticResource NeutralButton}" Content="Bỏ cuộc" Width="100" Height="40" Visibility="{Binding IsRunning, Converter={StaticResource BoolToVisibilityConverter}}"/>
-                            </StackPanel>
-                        </Grid>
+                    <!-- Top: Mode Switch pill bar (Compact Glass) -->
+                    <Border Grid.Row="0" HorizontalAlignment="Center" Background="{Binding CardBackgroundBrush}" BorderBrush="{Binding CardBorderBrush}" BorderThickness="1" CornerRadius="20" Padding="6,4" Margin="0,0,0,24" WindowChrome.IsHitTestVisibleInChrome="True">
+                        <StackPanel Orientation="Horizontal">
+                            <RadioButton Content="Tập trung" IsChecked="{Binding IsFocusMode, Mode=TwoWay}" Command="{Binding SwitchModeCommand}" CommandParameter="Focus" Style="{StaticResource RadioButtonMode}"/>
+                            <RadioButton Content="Nghỉ ngắn" IsChecked="{Binding IsShortBreakMode, Mode=TwoWay}" Command="{Binding SwitchModeCommand}" CommandParameter="Short Break" Style="{StaticResource RadioButtonMode}"/>
+                            <RadioButton Content="Nghỉ dài" IsChecked="{Binding IsLongBreakMode, Mode=TwoWay}" Command="{Binding SwitchModeCommand}" CommandParameter="Long Break" Style="{StaticResource RadioButtonMode}"/>
+                        </StackPanel>
                     </Border>
-                </Border>
+
+                    <!-- Middle: Clean Timer Text standing 100% directly on wallpaper -->
+                    <Viewbox Grid.Row="1" MaxHeight="240" MaxWidth="400" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,10">
+                        <StackPanel HorizontalAlignment="Center">
+                            <TextBlock Text="{Binding TimerText}" FontSize="96" FontWeight="ExtraLight" HorizontalAlignment="Center" Foreground="{Binding TextForegroundBrush}" Margin="0,-10,0,0">
+                                <TextBlock.Effect>
+                                    <DropShadowEffect BlurRadius="12" ShadowDepth="2" Opacity="0.75" Color="#000000"/>
+                                </TextBlock.Effect>
+                            </TextBlock>
+                            <TextBlock Text="{Binding TimerMode}" FontSize="13" FontWeight="Bold" Foreground="{Binding TextForegroundBrush}" Opacity="0.9" HorizontalAlignment="Center" Margin="0,4,0,0">
+                                <TextBlock.Effect>
+                                    <DropShadowEffect BlurRadius="8" ShadowDepth="1" Opacity="0.7" Color="#000000"/>
+                                </TextBlock.Effect>
+                            </TextBlock>
+
+                            <!-- Progress line underneath -->
+                            <Border Background="#33000000" CornerRadius="3" Height="6" Width="260" Margin="0,20,0,0">
+                                <ProgressBar Value="{Binding ProgressValue}" Minimum="0" Maximum="1" Foreground="{Binding SelectedAccentBrush}" Height="6" BorderThickness="0" Background="Transparent"/>
+                            </Border>
+                        </StackPanel>
+                    </Viewbox>
+
+                    <!-- Bottom: Compact Glass Action Buttons Container -->
+                    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,24,0,0" WindowChrome.IsHitTestVisibleInChrome="True">
+                        <!-- Start / Pause -->
+                        <Button Command="{Binding StartTimerCommand}" Style="{StaticResource AccentButton}" Content="Bắt đầu" Width="130" Height="42" Margin="0,0,12,0" Visibility="{Binding IsRunning, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse}"/>
+                        <Button Command="{Binding PauseTimerCommand}" Style="{StaticResource NeutralButton}" Content="Tạm dừng" Width="130" Height="42" Margin="0,0,12,0" Visibility="{Binding IsRunning, Converter={StaticResource BoolToVisibilityConverter}}"/>
+
+                        <!-- Reset / Give Up -->
+                        <Button Command="{Binding ResetTimerCommand}" Style="{StaticResource NeutralButton}" Content="Bỏ cuộc" Width="100" Height="42" Visibility="{Binding IsRunning, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                    </StackPanel>
+                </Grid>
             </Grid>
         </Grid>
 
@@ -1340,6 +1365,95 @@
                         <Button Command="{Binding AddMultiLinePasteAsSingleCommand}" Style="{StaticResource NeutralButton}" Content="Tạo 1 thẻ duy nhất" Height="32" Margin="0,0,8,0" Padding="12,0"/>
                         <Button Command="{Binding SplitMultiLinePasteCommand}" Style="{StaticResource AccentButton}" Content="Tách dòng thành các thẻ" Height="32" Padding="12,0"/>
                     </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- FLOATING ADD TASK MODAL POPUP -->
+        <Grid Grid.Row="1" Background="#7F000000" Visibility="{Binding IsAddTaskModalVisible, Converter={StaticResource BoolToVisibilityConverter}}" Panel.ZIndex="25" WindowChrome.IsHitTestVisibleInChrome="True">
+            <!-- Click backdrop to close modal -->
+            <Grid.InputBindings>
+                <MouseBinding Gesture="LeftClick" Command="{Binding ToggleAddTaskModalCommand}"/>
+            </Grid.InputBindings>
+
+            <Border Width="420" VerticalAlignment="Center" HorizontalAlignment="Center" Background="{Binding CardBackgroundBrush}" BorderBrush="{Binding CardBorderBrush}" BorderThickness="1" CornerRadius="16" Padding="20">
+                <!-- Suppress backdrop click on modal content -->
+                <Border.InputBindings>
+                    <MouseBinding Gesture="LeftClick" Command="{Binding ToggleAddTaskModalCommand}" CommandParameter="SuppressClose"/>
+                </Border.InputBindings>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Header -->
+                    <Grid Grid.Row="0" Margin="0,0,0,16">
+                        <TextBlock Text="Tạo nhiệm vụ mới" FontSize="16" FontWeight="Bold" Foreground="{Binding TextForegroundBrush}"/>
+                        <Button Command="{Binding ToggleAddTaskModalCommand}" HorizontalAlignment="Right" Background="Transparent" BorderThickness="0" Cursor="Hand">
+                            <Button.Template>
+                                <ControlTemplate TargetType="Button">
+                                    <TextBlock Text="✕" FontSize="15" Foreground="{Binding TextForegroundBrush}" Opacity="0.6"/>
+                                </ControlTemplate>
+                            </Button.Template>
+                        </Button>
+                    </Grid>
+
+                    <!-- Title Input -->
+                    <TextBox Grid.Row="1" Text="{Binding NewTaskTitle, UpdateSourceTrigger=PropertyChanged}" 
+                             Background="{Binding TextBoxBackgroundBrush}" BorderBrush="{Binding CardBorderBrush}" Foreground="{Binding TextForegroundBrush}" 
+                             Padding="10,8" FontSize="13.5" Margin="0,0,0,16" Tag="Nhập nội dung nhiệm vụ... (Enter để lưu)">
+                        <TextBox.InputBindings>
+                            <KeyBinding Key="Enter" Command="{Binding AddTaskCommand}"/>
+                        </TextBox.InputBindings>
+                        <TextBox.Resources>
+                            <Style TargetType="{x:Type Border}">
+                                <Setter Property="CornerRadius" Value="8"/>
+                            </Style>
+                        </TextBox.Resources>
+                    </TextBox>
+
+                    <!-- Metadata Selectors & Actions -->
+                    <Grid Grid.Row="2">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                            <!-- Priority -->
+                            <ComboBox SelectedValue="{Binding NewTaskPriority}" SelectedValuePath="Content" Style="{StaticResource ModernComboBox}" Width="85" Height="28" Margin="0,0,8,0">
+                                <ComboBoxItem Content="High"/>
+                                <ComboBoxItem Content="Medium" IsSelected="True"/>
+                                <ComboBoxItem Content="Low"/>
+                            </ComboBox>
+
+                            <!-- Tag -->
+                            <ComboBox SelectedValue="{Binding NewTaskTag}" SelectedValuePath="Content" Style="{StaticResource ModernComboBox}" Width="85" Height="28" Margin="0,0,8,0">
+                                <ComboBoxItem Content="Work" IsSelected="True"/>
+                                <ComboBoxItem Content="Study"/>
+                                <ComboBoxItem Content="Personal"/>
+                                <ComboBoxItem Content="Health"/>
+                            </ComboBox>
+
+                            <!-- Est -->
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text="Est:" FontSize="10" Foreground="{Binding TextForegroundBrush}" Opacity="0.65" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                <ComboBox SelectedValue="{Binding NewTaskEstimate}" SelectedValuePath="Content" Style="{StaticResource ModernComboBox}" Width="50" Height="28">
+                                    <ComboBoxItem Content="1" IsSelected="True"/>
+                                    <ComboBoxItem Content="2"/>
+                                    <ComboBoxItem Content="3"/>
+                                    <ComboBoxItem Content="4"/>
+                                    <ComboBoxItem Content="5"/>
+                                    <ComboBoxItem Content="8"/>
+                                </ComboBox>
+                            </StackPanel>
+                        </StackPanel>
+
+                        <!-- Confirm Add button -->
+                        <Button Grid.Column="1" Command="{Binding AddTaskCommand}" Style="{StaticResource AccentButton}" Content="Tạo thẻ" Width="80" Height="28" Padding="0"/>
+                    </Grid>
                 </Grid>
             </Border>
         </Grid>

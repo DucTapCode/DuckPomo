@@ -31,6 +31,7 @@ namespace Pomodoro
         private double _savedWidth;
         private double _savedHeight;
         private bool _isStrictFullscreenActive = false;
+        private bool _isUserF11FullscreenActive = false;
 
         private const uint SWP_NOSIZE = 0x0001;
         private const uint SWP_NOMOVE = 0x0002;
@@ -130,12 +131,17 @@ namespace Pomodoro
                 if (e.Key == System.Windows.Input.Key.F11)
                 {
                     e.Handled = true;
-                    ApplyStrictFullscreen(!_isStrictFullscreenActive);
+                    _isUserF11FullscreenActive = !_isUserF11FullscreenActive;
+                    bool shouldBeFullscreen = _isUserF11FullscreenActive ||
+                        (viewModel.IsRunning && viewModel.TimerMode == "Focus" && viewModel.Settings.IsStrictModeEnabled);
+                    ApplyStrictFullscreen(shouldBeFullscreen);
                 }
                 else if (e.Key == System.Windows.Input.Key.Escape && _isStrictFullscreenActive)
                 {
                     e.Handled = true;
-                    ApplyStrictFullscreen(false);
+                    _isUserF11FullscreenActive = false;
+                    bool shouldBeFullscreen = viewModel.IsRunning && viewModel.TimerMode == "Focus" && viewModel.Settings.IsStrictModeEnabled;
+                    ApplyStrictFullscreen(shouldBeFullscreen);
                 }
             };
 
@@ -163,13 +169,15 @@ namespace Pomodoro
             }
 
             // Load saved Todo column layout using proportional star-based sizing (keeps dynamic stretching intact)
-            if (settings.TodoColumnWidth != -1)
+            UpdateDrawerColumnWidth(viewModel.IsTodoDrawerCollapsed, settings.TodoColumnWidth);
+
+            viewModel.PropertyChanged += (s, e) =>
             {
-                // Constrain settings.TodoColumnWidth to be within a reasonable star range (e.g. 1.0 to 9.0)
-                double starVal = Math.Max(1.0, Math.Min(9.0, settings.TodoColumnWidth));
-                TodoColumn.Width = new GridLength(starVal, GridUnitType.Star);
-                PomoColumn.Width = new GridLength(10.0 - starVal, GridUnitType.Star);
-            }
+                if (e.PropertyName == nameof(MainViewModel.IsTodoDrawerCollapsed))
+                {
+                    UpdateDrawerColumnWidth(viewModel.IsTodoDrawerCollapsed, settings.TodoColumnWidth);
+                }
+            };
 
             // Save window size, position, and column layout on close
             this.Closing += (s, e) =>
@@ -193,11 +201,14 @@ namespace Pomodoro
                 }
                 settings.WindowState = this.WindowState.ToString();
                 
-                // Save custom Todo column width ratio in proportional Star units (out of 10.0 total stars)
-                double totalAct = TodoColumn.ActualWidth + PomoColumn.ActualWidth;
-                if (totalAct > 0)
+                // Save custom Todo column width ratio in proportional Star units (out of 10.0 total stars) if drawer is expanded
+                if (!viewModel.IsTodoDrawerCollapsed)
                 {
-                    settings.TodoColumnWidth = (TodoColumn.ActualWidth / totalAct) * 10.0;
+                    double totalAct = TodoColumn.ActualWidth + PomoColumn.ActualWidth;
+                    if (totalAct > 0)
+                    {
+                        settings.TodoColumnWidth = (TodoColumn.ActualWidth / totalAct) * 10.0;
+                    }
                 }
                 
                 // Clear temporary Wallpaper Engine extraction cache to prevent disk bloating
@@ -280,17 +291,14 @@ namespace Pomodoro
                 }
                 else if (e.PropertyName == nameof(MainViewModel.IsRunning) || e.PropertyName == nameof(MainViewModel.TimerMode))
                 {
-                    if (viewModel.IsRunning && viewModel.TimerMode == "Focus" && viewModel.Settings.IsStrictModeEnabled)
+                    bool shouldBeFullscreen = _isUserF11FullscreenActive ||
+                        (viewModel.IsRunning && viewModel.TimerMode == "Focus" && viewModel.Settings.IsStrictModeEnabled);
+
+                    ApplyStrictFullscreen(shouldBeFullscreen);
+
+                    if (!shouldBeFullscreen && _strictModeOverlayWindow != null && _strictModeOverlayWindow.IsVisible)
                     {
-                        ApplyStrictFullscreen(true);
-                    }
-                    else
-                    {
-                        ApplyStrictFullscreen(false);
-                        if (_strictModeOverlayWindow != null && _strictModeOverlayWindow.IsVisible)
-                        {
-                            _strictModeOverlayWindow.Hide();
-                        }
+                        _strictModeOverlayWindow.Hide();
                     }
                 }
             };
@@ -332,6 +340,21 @@ namespace Pomodoro
             catch
             {
                 // Silent fallback if icon is missing
+            }
+        }
+
+        private void UpdateDrawerColumnWidth(bool isCollapsed, double savedStarWidth)
+        {
+            if (isCollapsed)
+            {
+                TodoColumn.Width = new GridLength(56);
+                PomoColumn.Width = new GridLength(1.0, GridUnitType.Star);
+            }
+            else
+            {
+                double starVal = savedStarWidth != -1 ? Math.Max(1.0, Math.Min(9.0, savedStarWidth)) : 3.5;
+                TodoColumn.Width = new GridLength(starVal, GridUnitType.Star);
+                PomoColumn.Width = new GridLength(10.0 - starVal, GridUnitType.Star);
             }
         }
 
@@ -594,9 +617,14 @@ namespace Pomodoro
                 {
                     string ext = System.IO.Path.GetExtension(mediaPath).ToLower();
 
-                    // Detect background color and synchronize theme accent/cards
-                    Color avgColor = GetBackgroundAverageColor(mediaPath);
-                    UpdateThemeColorsForBackground(vm, avgColor);
+                    // Detect background color asynchronously on background thread to prevent UI freezing
+                    Task.Run(() => GetBackgroundAverageColor(mediaPath)).ContinueWith(task =>
+                    {
+                        if (task.Status == TaskStatus.RanToCompletion && DataContext is MainViewModel currentVm)
+                        {
+                            Dispatcher.Invoke(() => UpdateThemeColorsForBackground(currentVm, task.Result));
+                        }
+                    });
 
                     // Set solid dark background on the player grid to prevent transparent GIF pixels bleeding the desktop/IDE through
                     BackgroundPlayerGrid.Background = new SolidColorBrush(Color.FromRgb(18, 18, 22));
@@ -850,22 +878,23 @@ namespace Pomodoro
                 var bitmap = new System.Windows.Media.Imaging.BitmapImage();
                 bitmap.BeginInit();
                 bitmap.UriSource = new Uri(filePath);
+                bitmap.DecodePixelWidth = 100; // Downscale to 100px for lightning-fast sampling without UI freeze
                 bitmap.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
                 bitmap.EndInit();
+                bitmap.Freeze(); // Make cross-thread safe
 
                 // FormatConvert to 32-bit RGB
                 var fcBitmap = new System.Windows.Media.Imaging.FormatConvertedBitmap(bitmap, PixelFormats.Bgra32, null, 0);
+                fcBitmap.Freeze();
 
-                // Sample a 8x8 grid of pixels to find the most vibrant color
-                int gridWidth = 8;
-                int gridHeight = 8;
+                int gridWidth = 10;
+                int gridHeight = 10;
                 int stepX = Math.Max(1, fcBitmap.PixelWidth / gridWidth);
                 int stepY = Math.Max(1, fcBitmap.PixelHeight / gridHeight);
 
                 Color bestColor = Color.FromRgb(244, 63, 94); // default rose
                 double maxSaturation = -1;
 
-                // Also calculate average color as fallback
                 long sumR = 0, sumG = 0, sumB = 0, count = 0;
 
                 for (int y = 0; y < fcBitmap.PixelHeight; y += stepY)
@@ -888,7 +917,6 @@ namespace Pomodoro
                         Color c = Color.FromRgb(r, g, b);
                         ColorToHsl(c, out double h, out double s, out double l);
 
-                        // We prefer colors that are highly saturated and in a legible lightness range (0.2 to 0.8)
                         if (s > maxSaturation && l > 0.2 && l < 0.8)
                         {
                             maxSaturation = s;
@@ -897,7 +925,6 @@ namespace Pomodoro
                     }
                 }
 
-                // If the most saturated color is very dull (e.g. grayscale background), use average color
                 if (maxSaturation < 0.15 && count > 0)
                 {
                     return Color.FromRgb((byte)(sumR / count), (byte)(sumG / count), (byte)(sumB / count));
@@ -927,32 +954,34 @@ namespace Pomodoro
                 // For dark backgrounds, we want a vibrant, highly-saturated neon accent
                 accentColor = ColorFromHsl(h, 0.85, 0.65);
                 
-                // Blend avgColor (20%) with base dark grey (80%) for an integrated glass tint
-                byte cardR = (byte)(0.2 * avgColor.R + 0.8 * 18);
-                byte cardG = (byte)(0.2 * avgColor.G + 0.8 * 18);
-                byte cardB = (byte)(0.2 * avgColor.B + 0.8 * 22);
+                // Blend avgColor (25%) with base dark grey (75%) for an integrated ultra-glass tint
+                byte cardR = (byte)(0.25 * avgColor.R + 0.75 * 18);
+                byte cardG = (byte)(0.25 * avgColor.G + 0.75 * 18);
+                byte cardB = (byte)(0.25 * avgColor.B + 0.75 * 22);
                 
-                vm.CardBackgroundBrush = new SolidColorBrush(Color.FromArgb(40, cardR, cardG, cardB));
-                vm.CardBorderBrush = new SolidColorBrush(Color.FromArgb(20, 255, 255, 255));
+                // Opacity set to ~18% (45/255) for maximum wallpaper transparency
+                vm.CardBackgroundBrush = new SolidColorBrush(Color.FromArgb(45, cardR, cardG, cardB));
+                vm.CardBorderBrush = new SolidColorBrush(Color.FromArgb(38, 255, 255, 255)); // 15% white border
                 vm.TextForegroundBrush = new SolidColorBrush(Color.FromRgb(244, 244, 245));
-                vm.SubTextForegroundBrush = new SolidColorBrush(Color.FromRgb(161, 161, 170));
-                vm.TextBoxBackgroundBrush = new SolidColorBrush(Color.FromArgb(60, cardR, cardG, cardB));
+                vm.SubTextForegroundBrush = new SolidColorBrush(Color.FromRgb(180, 180, 190));
+                vm.TextBoxBackgroundBrush = new SolidColorBrush(Color.FromArgb(80, cardR, cardG, cardB));
             }
             else
             {
-                // For light backgrounds, we want a dark, high-contrast readable accent
-                accentColor = ColorFromHsl(h, 0.80, 0.35);
+                // For light/neutral backgrounds, use soft white glass tint (rgba(255, 255, 255, 0.18))
+                accentColor = ColorFromHsl(h, 0.85, 0.30);
                 
-                // Blend avgColor (20%) with white (80%) for an integrated light glass tint
-                byte cardR = (byte)(0.2 * avgColor.R + 0.8 * 255);
-                byte cardG = (byte)(0.2 * avgColor.G + 0.8 * 255);
-                byte cardB = (byte)(0.2 * avgColor.B + 0.8 * 255);
+                // Blend avgColor (20%) with pure white (80%) for soft white glass
+                byte cardR = (byte)(0.20 * avgColor.R + 0.80 * 255);
+                byte cardG = (byte)(0.20 * avgColor.G + 0.80 * 255);
+                byte cardB = (byte)(0.20 * avgColor.B + 0.80 * 255);
                 
-                vm.CardBackgroundBrush = new SolidColorBrush(Color.FromArgb(40, cardR, cardG, cardB));
-                vm.CardBorderBrush = new SolidColorBrush(Color.FromArgb(25, 0, 0, 0));
+                // Opacity set to ~18% (45/255) for ultra transparent light glass
+                vm.CardBackgroundBrush = new SolidColorBrush(Color.FromArgb(45, cardR, cardG, cardB));
+                vm.CardBorderBrush = new SolidColorBrush(Color.FromArgb(40, 255, 255, 255)); // 15% white border
                 vm.TextForegroundBrush = new SolidColorBrush(Color.FromRgb(24, 24, 27));
-                vm.SubTextForegroundBrush = new SolidColorBrush(Color.FromRgb(113, 113, 122));
-                vm.TextBoxBackgroundBrush = new SolidColorBrush(Color.FromArgb(60, cardR, cardG, cardB));
+                vm.SubTextForegroundBrush = new SolidColorBrush(Color.FromRgb(90, 90, 100));
+                vm.TextBoxBackgroundBrush = new SolidColorBrush(Color.FromArgb(90, cardR, cardG, cardB));
             }
 
             vm.SelectedAccentBrush = new SolidColorBrush(accentColor);

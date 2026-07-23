@@ -133,6 +133,8 @@ namespace Pomodoro.ViewModels
             AddMultiLinePasteAsSingleCommand = new RelayCommand(AddMultiLinePasteAsSingle);
             SelectThemeCommand = new RelayCommand<string>(SelectTheme);
             ChooseCustomImageCommand = new RelayCommand(ChooseCustomImage);
+            ToggleTodoDrawerCommand = new RelayCommand(() => IsTodoDrawerCollapsed = !IsTodoDrawerCollapsed);
+            ToggleAddTaskModalCommand = new RelayCommand(() => IsAddTaskModalVisible = !IsAddTaskModalVisible);
 
             // Sync collection and run statistics
             ApplyFilters();
@@ -224,6 +226,13 @@ namespace Pomodoro.ViewModels
             set { if (value) SwitchMode("Long Break"); }
         }
 
+        private bool _isAddTaskModalVisible;
+        public bool IsAddTaskModalVisible
+        {
+            get => _isAddTaskModalVisible;
+            set => SetProperty(ref _isAddTaskModalVisible, value);
+        }
+
         public bool IsSettingsVisible
         {
             get => _isSettingsVisible;
@@ -232,6 +241,7 @@ namespace Pomodoro.ViewModels
                 if (SetProperty(ref _isSettingsVisible, value) && value)
                 {
                     IsSpotifyPlayerVisible = false;
+                    IsAddTaskModalVisible = false;
                 }
             }
         }
@@ -843,6 +853,23 @@ namespace Pomodoro.ViewModels
         public ICommand NavigateToSpotifyLoginCommand { get; }
         public ICommand NavigateToSpotifyPlayerCommand { get; }
 
+        public bool IsTodoDrawerCollapsed
+        {
+            get => _settings.IsTodoDrawerCollapsed;
+            set
+            {
+                if (_settings.IsTodoDrawerCollapsed != value)
+                {
+                    _settings.IsTodoDrawerCollapsed = value;
+                    _dataService.SaveSettings(_settings);
+                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(UncompletedTasksCount));
+                }
+            }
+        }
+
+        public int UncompletedTasksCount => _allTasks.Count(t => !t.IsCompleted);
+
         // Advanced Commands
         public ICommand CloneTaskCommand { get; }
         public ICommand ToggleWatchTaskCommand { get; }
@@ -854,6 +881,8 @@ namespace Pomodoro.ViewModels
         public ICommand AddMultiLinePasteAsSingleCommand { get; }
         public ICommand SelectThemeCommand { get; }
         public ICommand ChooseCustomImageCommand { get; }
+        public ICommand ToggleTodoDrawerCommand { get; }
+        public ICommand ToggleAddTaskModalCommand { get; }
 
         #endregion
 
@@ -888,11 +917,12 @@ namespace Pomodoro.ViewModels
                 ActiveFocusTask = task;
             }
 
-            // Clear inputs
+            // Clear inputs & close modal
             NewTaskTitle = string.Empty;
             NewTaskPriority = "Medium";
             NewTaskEstimate = 1;
             NewTaskTag = "Work";
+            IsAddTaskModalVisible = false;
 
             SaveAndApplyFilters();
             UpdateStatistics();
