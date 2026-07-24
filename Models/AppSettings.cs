@@ -41,5 +41,6 @@ namespace Pomodoro.Models
         public double BackgroundVideoVolume { get; set; } = 0.0; // Range: 0 to 100 (WPF MediaElement uses 0 to 1.0, so we divide by 100)
         public string SpotifyPlaylistUrl { get; set; } = "https://open.spotify.com/embed/playlist/37i9dQZF1DWWQRwui0ExPn";
         public bool IsTodoDrawerCollapsed { get; set; } = false;
+        public bool IsSidebarAutoHideEnabled { get; set; } = true;
     }
 }

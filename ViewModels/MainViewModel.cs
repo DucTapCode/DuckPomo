@@ -868,6 +868,20 @@ namespace Pomodoro.ViewModels
             }
         }
 
+        public bool IsSidebarAutoHideEnabled
+        {
+            get => _settings.IsSidebarAutoHideEnabled;
+            set
+            {
+                if (_settings.IsSidebarAutoHideEnabled != value)
+                {
+                    _settings.IsSidebarAutoHideEnabled = value;
+                    _dataService.SaveSettings(_settings);
+                    OnPropertyChanged();
+                }
+            }
+        }
+
         public int UncompletedTasksCount => _allTasks.Count(t => !t.IsCompleted);
 
         // Advanced Commands

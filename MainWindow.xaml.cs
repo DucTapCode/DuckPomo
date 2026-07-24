@@ -33,6 +33,16 @@ namespace Pomodoro
         private bool _isStrictFullscreenActive = false;
         private bool _isUserF11FullscreenActive = false;
 
+        private bool _isSidebarHoverExpanded = false;
+        private System.Windows.Threading.DispatcherTimer? _sidebarAnimTimer;
+        private System.Windows.Threading.DispatcherTimer? _sidebarLeaveDebounceTimer;
+        private double _animStartWidth;
+        private double _animTargetWidth;
+        private double _animStartSplitterWidth;
+        private double _animTargetSplitterWidth;
+        private DateTime _animStartTime;
+        private const double ANIM_DURATION_MS = 180;
+
         private const uint SWP_NOSIZE = 0x0001;
         private const uint SWP_NOMOVE = 0x0002;
         private const uint SWP_NOZORDER = 0x0004;
@@ -55,6 +65,7 @@ namespace Pomodoro
                 }
 
                 if (CustomTitleBar != null) CustomTitleBar.Visibility = Visibility.Collapsed;
+                if (FocusHeaderTitle != null) FocusHeaderTitle.Visibility = Visibility.Collapsed;
                 if (MinimizeBtn != null) MinimizeBtn.IsEnabled = false;
                 if (MaximizeBtn != null) MaximizeBtn.IsEnabled = false;
 
@@ -92,6 +103,7 @@ namespace Pomodoro
                     this.Topmost = false;
 
                     if (CustomTitleBar != null) CustomTitleBar.Visibility = Visibility.Visible;
+                    if (FocusHeaderTitle != null) FocusHeaderTitle.Visibility = Visibility.Visible;
                     TaskbarManager.ShowTaskbar();
                     this.ResizeMode = ResizeMode.CanResize;
 
@@ -173,9 +185,27 @@ namespace Pomodoro
 
             viewModel.PropertyChanged += (s, e) =>
             {
-                if (e.PropertyName == nameof(MainViewModel.IsTodoDrawerCollapsed))
+                if (e.PropertyName == nameof(MainViewModel.IsTodoDrawerCollapsed) ||
+                    e.PropertyName == nameof(MainViewModel.IsSidebarAutoHideEnabled))
                 {
                     UpdateDrawerColumnWidth(viewModel.IsTodoDrawerCollapsed, settings.TodoColumnWidth);
+                }
+            };
+
+            RootWindowGrid.MouseMove += (s, e) =>
+            {
+                if (DataContext is not MainViewModel vm) return;
+                if (vm.IsTodoDrawerCollapsed && vm.Settings.IsSidebarAutoHideEnabled)
+                {
+                    var pos = e.GetPosition(RootWindowGrid);
+                    if (_isSidebarHoverExpanded && pos.X > 90)
+                    {
+                        HideSidebarHover();
+                    }
+                    else if (!_isSidebarHoverExpanded && pos.X <= 25)
+                    {
+                        ShowSidebarHover();
+                    }
                 }
             };
 
@@ -343,17 +373,130 @@ namespace Pomodoro
             }
         }
 
-        private void UpdateDrawerColumnWidth(bool isCollapsed, double savedStarWidth)
+        private void ShowSidebarHover()
         {
+            if (DataContext is not MainViewModel vm) return;
+            if (!vm.IsTodoDrawerCollapsed || !vm.Settings.IsSidebarAutoHideEnabled) return;
+
+            _sidebarLeaveDebounceTimer?.Stop();
+            if (!_isSidebarHoverExpanded)
+            {
+                _isSidebarHoverExpanded = true;
+                if (LeftEdgeHoverTrigger != null) LeftEdgeHoverTrigger.IsHitTestVisible = false;
+                UpdateDrawerColumnWidth(true, vm.Settings.TodoColumnWidth, animate: true);
+            }
+        }
+
+        private void HideSidebarHover()
+        {
+            if (DataContext is not MainViewModel vm) return;
+            if (!vm.IsTodoDrawerCollapsed || !vm.Settings.IsSidebarAutoHideEnabled) return;
+
+            if (_sidebarLeaveDebounceTimer == null)
+            {
+                _sidebarLeaveDebounceTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(120) };
+                _sidebarLeaveDebounceTimer.Tick += (s, e) =>
+                {
+                    _sidebarLeaveDebounceTimer.Stop();
+                    var pos = System.Windows.Input.Mouse.GetPosition(RootWindowGrid);
+                    if (pos.X > 80 || pos.Y < 0 || pos.Y > RootWindowGrid.ActualHeight)
+                    {
+                        _isSidebarHoverExpanded = false;
+                        if (LeftEdgeHoverTrigger != null) LeftEdgeHoverTrigger.IsHitTestVisible = true;
+                        UpdateDrawerColumnWidth(true, vm.Settings.TodoColumnWidth, animate: true);
+                    }
+                };
+            }
+            _sidebarLeaveDebounceTimer.Stop();
+            _sidebarLeaveDebounceTimer.Start();
+        }
+
+        private void LeftEdgeHoverTrigger_MouseEnter(object sender, System.Windows.Input.MouseEventArgs e) => ShowSidebarHover();
+        private void LeftEdgeHoverTrigger_MouseMove(object sender, System.Windows.Input.MouseEventArgs e) => ShowSidebarHover();
+        private void TodoDrawerContainer_MouseEnter(object sender, System.Windows.Input.MouseEventArgs e) => ShowSidebarHover();
+        private void TodoDrawerContainer_MouseLeave(object sender, System.Windows.Input.MouseEventArgs e) => HideSidebarHover();
+
+        private void AnimateColumnWidths(double targetTodoWidth, double targetSplitterWidth)
+        {
+            if (_sidebarAnimTimer == null)
+            {
+                _sidebarAnimTimer = new System.Windows.Threading.DispatcherTimer(System.Windows.Threading.DispatcherPriority.Render);
+                _sidebarAnimTimer.Interval = TimeSpan.FromMilliseconds(16);
+                _sidebarAnimTimer.Tick += SidebarAnimTimer_Tick;
+            }
+
+            _animStartWidth = TodoColumn.Width.Value;
+            _animTargetWidth = targetTodoWidth;
+
+            _animStartSplitterWidth = SplitterColumn != null ? SplitterColumn.Width.Value : 0;
+            _animTargetSplitterWidth = targetSplitterWidth;
+
+            _animStartTime = DateTime.Now;
+            _sidebarAnimTimer.Start();
+        }
+
+        private void SidebarAnimTimer_Tick(object? sender, EventArgs e)
+        {
+            double elapsed = (DateTime.Now - _animStartTime).TotalMilliseconds;
+            double progress = Math.Min(1.0, elapsed / ANIM_DURATION_MS);
+            double easeProgress = 1.0 - Math.Pow(1.0 - progress, 3);
+
+            double currentTodoWidth = _animStartWidth + (_animTargetWidth - _animStartWidth) * easeProgress;
+            double currentSplitterWidth = _animStartSplitterWidth + (_animTargetSplitterWidth - _animStartSplitterWidth) * easeProgress;
+
+            TodoColumn.Width = new GridLength(Math.Max(0, currentTodoWidth));
+            if (SplitterColumn != null)
+            {
+                SplitterColumn.Width = new GridLength(Math.Max(0, currentSplitterWidth));
+            }
+
+            if (progress >= 1.0)
+            {
+                _sidebarAnimTimer?.Stop();
+                TodoColumn.Width = new GridLength(Math.Max(0, _animTargetWidth));
+                if (SplitterColumn != null)
+                {
+                    SplitterColumn.Width = new GridLength(Math.Max(0, _animTargetSplitterWidth));
+                }
+            }
+        }
+
+        private void UpdateDrawerColumnWidth(bool isCollapsed, double savedStarWidth, bool animate = false)
+        {
+            if (DataContext is not MainViewModel vm) return;
+
             if (isCollapsed)
             {
-                TodoColumn.Width = new GridLength(56);
-                PomoColumn.Width = new GridLength(1.0, GridUnitType.Star);
+                if (vm.Settings.IsSidebarAutoHideEnabled)
+                {
+                    double targetTodo = _isSidebarHoverExpanded ? 56 : 0;
+                    double targetSplitter = _isSidebarHoverExpanded ? 24 : 0;
+                    if (animate)
+                    {
+                        AnimateColumnWidths(targetTodo, targetSplitter);
+                    }
+                    else
+                    {
+                        _sidebarAnimTimer?.Stop();
+                        TodoColumn.Width = new GridLength(targetTodo);
+                        if (SplitterColumn != null) SplitterColumn.Width = new GridLength(targetSplitter);
+                        PomoColumn.Width = new GridLength(1.0, GridUnitType.Star);
+                    }
+                }
+                else
+                {
+                    _sidebarAnimTimer?.Stop();
+                    TodoColumn.Width = new GridLength(56);
+                    if (SplitterColumn != null) SplitterColumn.Width = new GridLength(32);
+                    PomoColumn.Width = new GridLength(1.0, GridUnitType.Star);
+                }
             }
             else
             {
+                _sidebarAnimTimer?.Stop();
                 double starVal = savedStarWidth != -1 ? Math.Max(1.0, Math.Min(9.0, savedStarWidth)) : 3.5;
                 TodoColumn.Width = new GridLength(starVal, GridUnitType.Star);
+                if (SplitterColumn != null) SplitterColumn.Width = new GridLength(32);
                 PomoColumn.Width = new GridLength(10.0 - starVal, GridUnitType.Star);
             }
         }
